@@ -54,6 +54,13 @@ El frontend ya incluye integración con **Supabase** ([supabase/schema.sql](supa
 3. **Acceso privado y primer administrador:** en **Authentication → Providers → Email / User Signups** desactiva el registro público libre y promueve tu cuenta administradora en SQL (`update public.profiles set role = 'admin' where lower(email) = lower('tu@correo');`). El botón **🧪 Pruebas** queda oculto automáticamente para el alumnado.
 4. **Conectar clave pública y URL:** verifica `url`, `publishableKey`, `publicBaseUrl` y `closedAccess: true` en [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js), y autoriza tu dominio en **Authentication → URL Configuration**.
 
+### Landing Page Comercial y SEO (`landing/`)
+
+La carpeta [landing/](landing/index.html) contiene la web pública de captación y ventas lista para `https://academia.useservices.company/`:
+- SEO técnico completo (`canonical`, Open Graph con [og-cover.png](landing/og-cover.png), Twitter Cards, [robots.txt](landing/robots.txt), [sitemap.xml](landing/sitemap.xml) y 4 bloques JSON-LD `schema.org`).
+- Explorador completo de los **38 bloques reales**, **2 simuladores interactivos en vivo**, comparativa, planes editables en [landing-config.js](landing/landing-config.js) y formulario conectado a `public.leads` en Supabase ([leads-migration.sql](supabase/leads-migration.sql)).
+- Configuración Nginx lista en [nginx-academia.conf](landing/nginx-academia.conf).
+
 ### Alojamiento estático preconfigurado
 
 - **GitHub Pages (gratis desde este repo):** en GitHub ve a **Settings → Pages → Source: GitHub Actions**. El workflow [deploy-pages.yml](.github/workflows/deploy-pages.yml) publicará `campus-certificacion/` automáticamente en `https://usettt19-eng.github.io/Plataforma-MBA/`.
