@@ -39,6 +39,7 @@
 
   // Hydrate brand & links from config
   const campusBase = String(CFG.campusUrl || "https://campus.useservices.company").replace(/\/+$/, "");
+  const contactEmail = String(CFG.contactEmail || "info@useservices.company").trim();
   const cleanWa = String(CFG.whatsappNumber || "").replace(/[^\d]/g, "");
   function buildWaLink(text) {
     return cleanWa ? `https://wa.me/${cleanWa}?text=${encodeURIComponent(text)}` : "";
@@ -52,14 +53,27 @@
   document.getElementById("footerCampusLink").href = `${campusBase}/`;
   document.getElementById("footerVerifyLink").href = `${campusBase}/?verify=`;
 
+  const enrollEmailEl = document.getElementById("enrollEmailDirectBtn");
+  if (enrollEmailEl && contactEmail) {
+    enrollEmailEl.href = `mailto:${contactEmail}`;
+    enrollEmailEl.textContent = `✉️ ${contactEmail}`;
+  }
+  const footerEmailEl = document.getElementById("footerEmailLink");
+  if (footerEmailEl && contactEmail) {
+    footerEmailEl.href = `mailto:${contactEmail}`;
+    footerEmailEl.textContent = contactEmail;
+  }
+
   if (cleanWa) {
     const floatEl = document.getElementById("waFloatBtn");
     const directEl = document.getElementById("enrollWaDirectBtn");
+    const footerWaEl = document.getElementById("footerWaLink");
     const waUrl = buildWaLink("Hola, me gustaría recibir información para matricularme en la Academia Ejecutiva Online.");
     floatEl.href = waUrl;
     floatEl.style.display = "inline-flex";
     directEl.href = waUrl;
     directEl.style.display = "inline-flex";
+    if (footerWaEl) footerWaEl.href = waUrl;
   }
 
   // Hero Preview Interactive Card
@@ -383,7 +397,7 @@
 
     const waSummary = `Hola, soy ${payload.full_name} (${payload.email}). Estoy interesado/a en "${payload.program_interest}" (${payload.plan_interest}).`;
     const waHref = buildWaLink(waSummary);
-    const mailHref = `mailto:${encodeURIComponent(CFG.contactEmail || "rdsuarez@useservices.company")}?subject=${encodeURIComponent("Solicitud de plaza — Academia Ejecutiva")}&body=${encodeURIComponent(waSummary + (payload.message ? "\n\n" + payload.message : ""))}`;
+    const mailHref = `mailto:${encodeURIComponent(contactEmail || "info@useservices.company")}?subject=${encodeURIComponent("Solicitud de plaza — Academia Ejecutiva")}&body=${encodeURIComponent(waSummary + (payload.message ? "\n\n" + payload.message : ""))}`;
 
     if (savedInSupabase) {
       leadForm.reset();

@@ -12,8 +12,8 @@ window.LANDING_CONFIG = {
 
   // Pon tu número con prefijo internacional sin "+" ni espacios (ej. "34600112233")
   // Al rellenarlo se activa automáticamente el botón flotante de WhatsApp y envío directo.
-  whatsappNumber: "",
-  contactEmail: "rdsuarez@useservices.company",
+  whatsappNumber: "50760759851",
+  contactEmail: "info@useservices.company",
 
   // true = muestra precios en tarjetas | false = muestra "Consultar inversión"
   showPrices: true,
