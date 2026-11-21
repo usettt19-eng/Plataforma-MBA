@@ -50,7 +50,8 @@
           <button class="role-btn" id="roleTrainerBtn">👩‍🏫 Formador</button>
         </div>
         <button class="cloud-pill local" id="cloudAuthBtn" title="Cuenta en la nube (Supabase Auth + PostgreSQL)">💾 Modo local</button>
-        <button class="btn btn-gold" id="openQaBtn" title="Herramientas rápidas para probar exámenes y certificado">🧪 Pruebas</button>
+        <button class="btn btn-primary" id="openAdminBtn" style="display:none;" title="Panel de administración: crear usuarios, asignar roles y supervisar diplomas">🛡️ Admin</button>
+        <button class="btn btn-gold" id="openQaBtn" style="display:none;" title="Herramientas rápidas para probar exámenes y certificado (solo administrador)">🧪 Pruebas</button>
         <button class="btn" id="openProfileBtn" title="Editar datos del titular del certificado">👤 <span id="topStudentName">Alumno</span></button>
         <button class="btn" id="themeBtn" title="Cambiar modo claro/oscuro">🌓</button>
       </div>
@@ -148,28 +149,23 @@
     </div>
 
     <div id="authGuestPane">
-      <p style="margin:0 0 12px; font-size:13px; color:var(--text-soft);">Inicia sesión o crea tu cuenta para guardar tu progreso, notas, horas y certificados verificables por QR en cualquier dispositivo.</p>
-      <div class="auth-tabs">
+      <p style="margin:0 0 12px; font-size:13px; color:var(--text-soft);">Acceso privado al campus: introduce el correo y contraseña asignados por la administración de la academia.</p>
+      <div class="auth-tabs two-cols">
         <button class="auth-tab active" data-auth-tab="login">Iniciar sesión</button>
-        <button class="auth-tab" data-auth-tab="signup">Crear cuenta</button>
-        <button class="auth-tab" data-auth-tab="reset">Recuperar</button>
+        <button class="auth-tab" data-auth-tab="reset">Recuperar clave</button>
       </div>
       <div id="authMsg" class="auth-msg" style="display:none;"></div>
       <form id="authForm">
-        <div class="field-group" id="authNameGroup" style="display:none;">
-          <label for="authFullName">Nombre completo (para el diploma)</label>
-          <input class="input" id="authFullName" type="text" placeholder="Ej.: Laura Martínez Gómez" autocomplete="name" />
-        </div>
         <div class="field-group">
           <label for="authEmail">Correo electrónico</label>
           <input class="input" id="authEmail" type="email" required placeholder="tu.correo@empresa.es" autocomplete="email" />
         </div>
         <div class="field-group" id="authPassGroup">
-          <label for="authPassword">Contraseña (mínimo 6 caracteres)</label>
+          <label for="authPassword">Contraseña</label>
           <input class="input" id="authPassword" type="password" minlength="6" placeholder="••••••••" autocomplete="current-password" />
         </div>
         <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-          <button type="button" class="btn" id="closeAuthGuestBtn">Seguir en modo local</button>
+          <button type="button" class="btn" id="closeAuthGuestBtn">Cerrar</button>
           <button type="submit" class="btn btn-primary" id="authSubmitBtn">Entrar en mi cuenta</button>
         </div>
       </form>
@@ -194,6 +190,45 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Admin Edit User Modal -->
+<div class="modal-bg" id="adminEditUserModal">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+      <h3 style="margin:0;">✏️ Editar usuario</h3>
+      <button class="btn" id="closeAdminEditXBtn" style="padding:4px 9px;">✕</button>
+    </div>
+    <p id="adminEditEmailLine" style="margin:0 0 12px; font-size:13px; color:var(--text-soft);"></p>
+    <div id="adminEditMsg" class="auth-msg" style="display:none;"></div>
+    <form id="adminEditForm">
+      <input type="hidden" id="adminEditUserId" />
+      <div class="field-group">
+        <label for="adminEditName">Nombre completo (aparece en diplomas)</label>
+        <input class="input" id="adminEditName" required placeholder="Ej.: Carlos Pérez Ruiz" />
+      </div>
+      <div class="field-group">
+        <label for="adminEditCompany">Empresa / Cargo</label>
+        <input class="input" id="adminEditCompany" placeholder="Opcional" />
+      </div>
+      <div class="field-group">
+        <label for="adminEditRole">Rol en el campus</label>
+        <select class="input" id="adminEditRole">
+          <option value="student">🎓 Alumno</option>
+          <option value="trainer">👩‍🏫 Formador</option>
+          <option value="admin">🛡️ Administrador</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label for="adminEditPassword">Nueva contraseña (dejar vacío para no cambiar)</label>
+        <input class="input" id="adminEditPassword" type="password" minlength="6" placeholder="Opcional · mínimo 6 caracteres" autocomplete="new-password" />
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button type="button" class="btn" id="closeAdminEditBtn">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="saveAdminEditBtn">Guardar usuario</button>
+      </div>
+    </form>
   </div>
 </div>
 

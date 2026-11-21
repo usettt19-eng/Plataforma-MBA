@@ -27,7 +27,7 @@ set search_path = public
 as $$
 begin
   if new.role is distinct from old.role then
-    if current_user not in ('postgres', 'supabase_admin')
+    if current_user not in ('postgres', 'supabase_admin', 'service_role')
        and coalesce(auth.jwt()->>'role', '') <> 'service_role' then
       raise exception 'No está permitido modificar el rol del perfil desde el cliente.';
     end if;
@@ -43,7 +43,7 @@ set search_path = public
 as $$
 begin
   if new.status is distinct from old.status then
-    if current_user not in ('postgres', 'supabase_admin')
+    if current_user not in ('postgres', 'supabase_admin', 'service_role')
        and coalesce(auth.jwt()->>'role', '') <> 'service_role' then
       raise exception 'Solo administración puede cambiar el estado de revocación de un certificado.';
     end if;
@@ -498,3 +498,12 @@ $$;
 
 revoke all on function public.verify_certificate(text) from public;
 grant execute on function public.verify_certificate(text) to anon, authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 11. Bootstrap inicial de Administrador (ejecutar manualmente una vez)
+-- Sustituye el correo por tu cuenta de administrador creada en Authentication -> Users:
+--
+--   update public.profiles
+--   set role = 'admin'
+--   where lower(email) = lower('tu-admin@useservices.company');
+-- -----------------------------------------------------------------------------

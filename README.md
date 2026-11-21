@@ -45,13 +45,14 @@ Abrir en el navegador: `http://localhost:8090` (o abrir directamente `campus-cer
 
 ---
 
-## Despliegue en servidor y activación de Supabase (3 pasos)
+## Despliegue en servidor y activación de Supabase + Panel Admin
 
-El frontend ya incluye integración con **Supabase** ([supabase/schema.sql](supabase/schema.sql), [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js) y [campus-certificacion/supabase-client.js](campus-certificacion/supabase-client.js)). Para activar la base de datos en producción:
+El frontend ya incluye integración con **Supabase** ([supabase/schema.sql](supabase/schema.sql), [supabase/functions/admin-users/index.ts](supabase/functions/admin-users/index.ts), [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js) y [campus-certificacion/supabase-client.js](campus-certificacion/supabase-client.js)):
 
-1. **Crear las tablas y políticas RLS:** abre **SQL Editor** en tu proyecto Supabase y ejecuta el contenido completo de [supabase/schema.sql](supabase/schema.sql) (incluye 8 tablas con RLS estricto por usuario, triggers anti-escalado de rol y la función pública `verify_certificate` con `SECURITY DEFINER`).
-2. **Conectar tu clave pública:** en **Project Settings → API** de Supabase copia tu **Publishable key (`sb_publishable_...`)** (o `anon public`, *nunca* la clave `service_role` / `secret`) y pégala en `publishableKey` dentro de [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js).
-3. **Configurar URLs de autenticación y publicar:** en **Authentication → URL Configuration** añade tu dominio de producción (por ejemplo `https://usettt19-eng.github.io/Plataforma-MBA/`) en **Site URL** y **Redirect URLs**.
+1. **Crear las tablas y políticas RLS:** abre **SQL Editor** en tu proyecto Supabase y ejecuta [supabase/schema.sql](supabase/schema.sql) (incluye 8 tablas con RLS estricto, triggers anti-escalado de rol y la función pública `verify_certificate`).
+2. **Desplegar la Edge Function de administración:** sube [supabase/functions/admin-users/index.ts](supabase/functions/admin-users/index.ts) como función `admin-users` en Supabase para habilitar la creación/edición/suspensión de usuarios y revocación de diplomas desde la vista **🛡️ Admin** (sin exponer nunca `service_role` en el navegador).
+3. **Acceso privado y primer administrador:** en **Authentication → Providers → Email / User Signups** desactiva el registro público libre y promueve tu cuenta administradora en SQL (`update public.profiles set role = 'admin' where lower(email) = lower('tu@correo');`). El botón **🧪 Pruebas** queda oculto automáticamente para el alumnado.
+4. **Conectar clave pública y URL:** verifica `url`, `publishableKey`, `publicBaseUrl` y `closedAccess: true` en [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js), y autoriza tu dominio en **Authentication → URL Configuration**.
 
 ### Alojamiento estático preconfigurado
 

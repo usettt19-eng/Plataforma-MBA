@@ -36,14 +36,15 @@ Project Management/
 ├── programa-pmp/                                    # Programa 3: Preparación PMP y Dirección de Proyectos (27 temas)
 ├── programa-emba/                                   # Programa 4: Executive MBA (26 temas)
 ├── supabase/
-│   └── schema.sql                                   # Esquema PostgreSQL + RLS + RPC pública verify_certificate
+│   ├── schema.sql                                   # Esquema PostgreSQL + RLS + RPC pública verify_certificate
+│   └── functions/admin-users/index.ts               # Edge Function segura para alta/gestión de usuarios (solo rol admin)
 │
 └── campus-certificacion/                            # Campus Web Interactivo Multi-Programa (4 certificados)
-    ├── index.html                                   # Portal multi-programa, barra superior, auth cloud, modales y QA
-    ├── styles.css                                   # Diseño claro/oscuro, presentaciones 3D, auth y diploma A4 horizontal
-    ├── supabase-config.js                           # URL y clave pública (publishable/anon) de Supabase
-    ├── supabase-client.js                           # Cliente Supabase Auth + sincronización cloud + verificación QR pública
-    ├── app.js                                       # Motor multi-programa: lazy-loading, slides, audio, tiempo, exámenes y QR
+    ├── index.html                                   # Portal multi-programa, login privado, modales Admin/Perfil y QA admin
+    ├── styles.css                                   # Diseño claro/oscuro, puerta de acceso, panel admin y diploma A4
+    ├── supabase-config.js                           # URL, clave pública (publishable/anon), publicBaseUrl y closedAccess
+    ├── supabase-client.js                           # Cliente Supabase Auth + sincronización + adminCall + verificación QR
+    ├── app.js                                       # Motor multi-programa: lazy-loading, Admin, Gate privado, slides, audio, QR
     └── data/
         ├── catalog-meta.js                          # Catálogo ligero (~17 KB) para arranque instantáneo bajo demanda
         ├── program-dind.js                          # 57 temas + diapositivas compiladas (Programa 1)
@@ -123,5 +124,5 @@ El campus combina **carga estática rápida + base de datos PostgreSQL multiusua
 1. **Carga bajo demanda (*lazy loading*):** [catalog-meta.js](campus-certificacion/data/catalog-meta.js) (~17 KB) carga instantáneamente el catálogo de los 4 programas en la portada; los módulos `program-*.js` y `assessments-*.js` se inyectan bajo demanda solo al entrar en cada programa.
 2. **Esquema PostgreSQL con RLS estricto ([supabase/schema.sql](supabase/schema.sql)):** 8 tablas (`profiles`, `enrollments`, `topic_progress`, `workshop_submissions`, `exam_attempts`, `program_study_time`, `study_sessions`, `certificates`) con `ENABLE ROW LEVEL SECURITY` y políticas basadas en `(select auth.uid()) = user_id`, además de triggers contra escalado de rol y manipulación de estado de revocación.
 3. **Verificación pública real por QR (`?verify=CERT-...`):** los códigos QR generados en los diplomas apuntan a la URL pública verificable y consultan la función RPC `public.verify_certificate(p_cert_id)` (`SECURITY DEFINER`, habilitada para `anon` y `authenticated` sin exponer la tabla completa de certificados ni correos privados).
-4. **Activación:** ejecutar [supabase/schema.sql](supabase/schema.sql) en Supabase SQL Editor y completar `publishableKey` en [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js).
-5. **Evolución futura opcional:** panel de tutor/administración por cohorte y audio `.mp3` neuronal pregenerado desde CDN.
+4. **Acceso cerrado y Panel de Administración (`🛡️ Admin`):** con `closedAccess: true` en [supabase-config.js](campus-certificacion/supabase-config.js), el portal exige iniciar sesión (ocultando el autoregistro público) y solo quienes tienen `role = 'admin'` ven **🛡️ Admin** y **🧪 Pruebas**. La Edge Function [admin-users](supabase/functions/admin-users/index.ts) valida el JWT y el rol `admin` en servidor antes de crear, editar, suspender o eliminar usuarios o revocar certificados QR.
+5. **Activación:** ejecutar [supabase/schema.sql](supabase/schema.sql) en Supabase SQL Editor, desplegar `admin-users` en Edge Functions, promover al primer administrador vía SQL y desactivar los *User Signups* públicos en Authentication.

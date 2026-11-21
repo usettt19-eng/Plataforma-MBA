@@ -192,6 +192,7 @@
 
   const cloudState = {
     configured: false,
+    booting: true,
     user: null,
     syncStatus: "local",
     lastError: "",
@@ -202,7 +203,7 @@
 
   let ui = {
     programId: PROGRAM_ORDER[0] || "dind",
-    view: "catalog", // catalog | dashboard | topic | workshop | exam | certificate | verify | portfolio
+    view: "catalog", // catalog | dashboard | topic | workshop | exam | certificate | verify | portfolio | admin
     role: "student", // student | trainer
     blockId: "b01",
     topicId: "b01-t01",
@@ -228,7 +229,33 @@
     error: ""
   };
 
+  const adminState = {
+    loading: false,
+    notDeployed: false,
+    error: "",
+    users: [],
+    stats: null,
+    search: "",
+    roleFilter: "all",
+    lastCreatedCreds: null,
+    createError: ""
+  };
+
   let navNonce = 0;
+
+  function isAdmin() {
+    if (!cloudState.configured) return true;
+    return Boolean(cloudState.user && db.profile?.role === "admin");
+  }
+
+  function isLockedByClosedAccess() {
+    return Boolean(
+      cloudState.configured &&
+      window.CampusCloud?.isClosedAccess?.() &&
+      !cloudState.user &&
+      ui.view !== "verify"
+    );
+  }
 
   function P() { return getMeta(ui.programId); }
   function A() { return getAssess(ui.programId); }
@@ -263,6 +290,27 @@
   const elTopTimerState = document.getElementById("topTimerState");
   const elSidebarTimeLabel = document.getElementById("sidebarTimeLabel");
   const elCloudAuthBtn = document.getElementById("cloudAuthBtn");
+  const elOpenAdminBtn = document.getElementById("openAdminBtn");
+  const elOpenQaBtn = document.getElementById("openQaBtn");
+  const elOpenProfileBtn = document.getElementById("openProfileBtn");
+  const elTopCatalogBtn = document.getElementById("topCatalogBtn");
+  const elToggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+  const elRoleSwitch = document.querySelector(".role-switch");
+
+  function updateRoleRestrictedUI() {
+    const locked = cloudState.booting || isLockedByClosedAccess();
+    const admin = !locked && isAdmin();
+    const inVerifyGuest = !cloudState.user && ui.view === "verify" && cloudState.configured && window.CampusCloud?.isClosedAccess?.();
+
+    if (elSidebar) elSidebar.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elToggleSidebarBtn) elToggleSidebarBtn.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elTopCatalogBtn) elTopCatalogBtn.style.display = locked ? "none" : "";
+    if (elTopTimerPill) elTopTimerPill.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elRoleSwitch) elRoleSwitch.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elOpenProfileBtn) elOpenProfileBtn.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elOpenQaBtn) elOpenQaBtn.style.display = admin ? "" : "none";
+    if (elOpenAdminBtn) elOpenAdminBtn.style.display = (admin && cloudState.configured) ? "" : "none";
+  }
 
   function toast(msg) {
     elToast.textContent = msg;
@@ -1020,6 +1068,14 @@
   async function navigate(view, opts = {}) {
     stopAudio(true);
     flushStudySession();
+    if (view === "admin" && !isAdmin()) {
+      toast("Acceso restringido a administradores");
+      ui.view = "catalog";
+      render();
+      updateTimerUI();
+      return;
+    }
+
     const nonce = ++navNonce;
     if (opts.programId) ui.programId = opts.programId;
     ui.view = view;
@@ -1068,6 +1124,14 @@
       return;
     }
 
+    if (view === "admin") {
+      render();
+      updateTimerUI();
+      elViewport.scrollTop = 0;
+      loadAdminUsers();
+      return;
+    }
+
     render();
     updateTimerUI();
     elViewport.scrollTop = 0;
@@ -1081,8 +1145,11 @@
     const markEl = document.getElementById("sidebarBrandMark");
     const nameEl = document.getElementById("sidebarBrandName");
     const tagEl = document.getElementById("sidebarBrandTag");
+    const adminBtnHtml = isAdmin() && cloudState.configured
+      ? `<button class="nav-link ${ui.view === "admin" ? "active" : ""}" data-nav="admin"><span class="left"><span>🛡️</span><span>Administración</span></span></button>`
+      : "";
 
-    if (ui.view === "catalog" || !window.PROGRAMS?.[ui.programId]) {
+    if (ui.view === "catalog" || ui.view === "admin" || !window.PROGRAMS?.[ui.programId]) {
       markEl.textContent = "🏛️";
       nameEl.textContent = "Portal de Certificaciones";
       const totalTopicsAll = PROGRAM_ORDER.reduce((a, id) => a + (getMeta(id)?.totalTopics || 0), 0);
@@ -1100,6 +1167,7 @@
         <button class="nav-link ${ui.view === "verify" ? "active" : ""}" data-nav="verify">
           <span class="left"><span>🔍</span><span>Verificar Credencial</span></span>
         </button>
+        ${adminBtnHtml}
         <div class="nav-divider">Certificados Disponibles</div>
         ${PROGRAM_ORDER.map((pid) => {
           const pr = getMeta(pid);
@@ -1145,6 +1213,7 @@
       <button class="nav-link ${ui.view === "portfolio" ? "active" : ""}" data-nav="portfolio">
         <span class="left"><span>📁</span><span>Mi Portafolio</span></span>
       </button>
+      ${adminBtnHtml}
       <div class="nav-divider">Itinerario (${prog.blocks.length} Bloques)</div>
     `;
 
@@ -2426,12 +2495,13 @@
           </div>
           <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
             <button class="btn btn-primary" id="certGoHomeBtn">Continuar con los bloques</button>
-            <button class="btn btn-gold" id="certOpenQaBtn">🧪 Usar Modo Pruebas para ver vista previa del diploma</button>
+            ${isAdmin() ? `<button class="btn btn-gold" id="certOpenQaBtn">🧪 Usar Modo Pruebas para ver vista previa del diploma</button>` : ""}
           </div>
         </div>
       `;
       document.getElementById("certGoHomeBtn").onclick = () => navigate("dashboard");
-      document.getElementById("certOpenQaBtn").onclick = () => document.getElementById("qaModal").classList.add("open");
+      const certQaBtn = document.getElementById("certOpenQaBtn");
+      if (certQaBtn) certQaBtn.onclick = () => document.getElementById("qaModal").classList.add("open");
       return;
     }
 
@@ -2680,7 +2750,10 @@
 
     elRoot.innerHTML = `
       <div class="card">
-        <h1 style="margin:0 0 6px; font-size:23px;">🔍 Verificador Público de Credenciales</h1>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+          <h1 style="margin:0; font-size:23px;">🔍 Verificador Público de Credenciales</h1>
+          ${!cloudState.user && cloudState.configured ? `<button class="btn btn-primary" id="verifyGoLoginBtn">🔐 Iniciar sesión en el Campus</button>` : ""}
+        </div>
         <p style="margin:0 0 14px; color:var(--text-soft); font-size:13.5px;">Valida en línea cualquier certificado emitido en cualquiera de los 4 programas de <strong>${esc(db.profile.org)}</strong>.</p>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <input class="input" id="verifyInput" style="flex:1; min-width:240px;" value="${esc(query)}" placeholder="Ej.: CERT-DIND-2026-..., CERT-GMBA-2026-..., CERT-PMP-2026-... o CERT-EMBA-2026-..." />
@@ -2691,6 +2764,8 @@
       ${bodyHtml}
     `;
 
+    const goLoginBtn = document.getElementById("verifyGoLoginBtn");
+    if (goLoginBtn) goLoginBtn.onclick = () => navigate("catalog");
     document.getElementById("doVerifyBtn").onclick = () => runPublicVerify(document.getElementById("verifyInput").value);
     const inp = document.getElementById("verifyInput");
     if (inp) {
@@ -2771,13 +2846,415 @@
   }
 
   // =====================================================
+  // VIEW 8: CLOSED-ACCESS LOGIN GATE & ADMIN PANEL
+  // =====================================================
+  let gateMode = "login";
+  function renderClosedGate() {
+    elCrumb.innerHTML = `<strong>🔐 Portal Privado de Certificaciones Ejecutivas</strong>`;
+    if (cloudState.booting) {
+      elRoot.innerHTML = `
+        <div class="card loading-card" style="max-width:460px; margin:40px auto;">
+          <div class="spinner"></div>
+          <h3 style="margin:0;">Verificando sesión…</h3>
+          <p style="margin:0; font-size:13.5px; color:var(--text-soft);">Conectando con tu cuenta del campus.</p>
+        </div>
+      `;
+      return;
+    }
+
+    elRoot.innerHTML = `
+      <div class="closed-gate">
+        <div class="closed-gate-head">
+          <span class="hero-chip">🏛️ Acceso Privado · ${esc(PROGRAM_ORDER.length)} Programas Ejecutivos</span>
+          <h1>Inicia sesión en tu Campus</h1>
+          <p>Introduce el correo electrónico y la contraseña facilitados por la administración de la academia para acceder a tus cursos, talleres, exámenes y diplomas.</p>
+        </div>
+        <div class="closed-gate-body">
+          <div class="auth-tabs two-cols">
+            <button type="button" class="auth-tab ${gateMode === "login" ? "active" : ""}" data-gate-tab="login">Iniciar sesión</button>
+            <button type="button" class="auth-tab ${gateMode === "reset" ? "active" : ""}" data-gate-tab="reset">Recuperar clave</button>
+          </div>
+          <div id="gateMsg" class="auth-msg" style="display:none;"></div>
+          <form id="gateForm">
+            <div class="field-group">
+              <label for="gateEmail">Correo electrónico</label>
+              <input class="input" id="gateEmail" type="email" required placeholder="nombre@empresa.com" autocomplete="email" />
+            </div>
+            <div class="field-group" style="display:${gateMode === "reset" ? "none" : "block"};">
+              <label for="gatePassword">Contraseña</label>
+              <input class="input" id="gatePassword" type="password" ${gateMode === "login" ? "required" : ""} minlength="6" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary" id="gateSubmitBtn" style="width:100%; justify-content:center; padding:11px 16px; font-size:14px; margin-top:6px;">
+              ${gateMode === "login" ? "🔐 Entrar al Campus" : "✉️ Enviar enlace de recuperación"}
+            </button>
+          </form>
+          <div class="closed-gate-foot">
+            <span style="font-size:12px; color:var(--text-soft);">¿Quieres validar un diploma?</span>
+            <button type="button" class="btn" id="gateVerifyBtn">🔍 Verificador Público QR</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    elRoot.querySelectorAll("[data-gate-tab]").forEach((b) => {
+      b.onclick = () => { gateMode = b.getAttribute("data-gate-tab"); renderClosedGate(); };
+    });
+    document.getElementById("gateVerifyBtn").onclick = () => navigate("verify");
+
+    const gateForm = document.getElementById("gateForm");
+    gateForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("gateEmail").value.trim();
+      const password = document.getElementById("gatePassword").value;
+      const btn = document.getElementById("gateSubmitBtn");
+      const msgEl = document.getElementById("gateMsg");
+      btn.disabled = true;
+      showAuthMsg(msgEl, "", "");
+      try {
+        if (gateMode === "login") {
+          const res = await window.CampusCloud.signIn({ email, password });
+          if (!res.ok) { showAuthMsg(msgEl, "err", res.error); return; }
+          await handleSignedIn(res.user);
+        } else {
+          const res = await window.CampusCloud.resetPassword(email);
+          if (!res.ok) { showAuthMsg(msgEl, "err", res.error); return; }
+          showAuthMsg(msgEl, "ok", "Hemos enviado un correo con el enlace para restablecer tu contraseña.");
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+
+  function generateStrongPassword(len = 12) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#!";
+    const buf = new Uint32Array(len);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(buf);
+    else { for (let i = 0; i < len; i++) buf[i] = Math.floor(Math.random() * 1e6); }
+    let out = "";
+    for (let i = 0; i < len; i++) out += chars[buf[i] % chars.length];
+    return out;
+  }
+
+  async function loadAdminUsers() {
+    if (!isAdmin() || !cloudState.configured) return;
+    adminState.loading = true;
+    adminState.error = "";
+    adminState.notDeployed = false;
+    if (ui.view === "admin") renderAdmin();
+
+    const res = await window.CampusCloud.adminCall("list");
+    adminState.loading = false;
+    if (!res.ok) {
+      adminState.notDeployed = Boolean(res.notDeployed || /conectar con la Edge Function/i.test(res.error || ""));
+      adminState.error = res.error || "No se pudo cargar la lista de usuarios.";
+    } else {
+      adminState.users = Array.isArray(res.users) ? res.users : [];
+      adminState.stats = res.stats || null;
+    }
+    if (ui.view === "admin") renderAdmin();
+  }
+
+  function getFilteredAdminUsers() {
+    const q = (adminState.search || "").trim().toLowerCase();
+    const rf = adminState.roleFilter || "all";
+    return (adminState.users || []).filter((u) => {
+      if (rf !== "all" && u.role !== rf) return false;
+      if (!q) return true;
+      return `${u.full_name} ${u.email} ${u.company}`.toLowerCase().includes(q);
+    });
+  }
+
+  function buildAdminTableRowsHtml(rows) {
+    const roleLabel = { admin: "🛡️ Admin", trainer: "👩‍🏫 Formador", student: "🎓 Alumno" };
+    if (adminState.loading && !adminState.users.length) {
+      return `<tr><td colspan="7" style="text-align:center; padding:26px; color:var(--text-soft);">Cargando usuarios desde Supabase…</td></tr>`;
+    }
+    if (!rows.length) {
+      return `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-soft);">No hay usuarios que coincidan con el filtro actual.</td></tr>`;
+    }
+    return rows.map((u) => {
+      const isSelf = u.id === cloudState.user?.id;
+      const lastLogin = u.last_sign_in_at
+        ? new Date(u.last_sign_in_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" })
+        : "Nunca";
+      const certsHtml = (u.certificates || []).length
+        ? u.certificates.map((c) => `
+            <div style="display:flex; align-items:center; gap:5px; margin-bottom:4px;">
+              <span class="pill ${c.status === "revoked" ? "danger" : "success"}" style="font-size:11px;">${esc(c.cert_id)}</span>
+              <button type="button" class="btn btn-xs" data-adm-cert="${esc(c.cert_id)}" data-adm-cert-status="${c.status === "revoked" ? "valid" : "revoked"}" title="${c.status === "revoked" ? "Reactivar certificado" : "Revocar certificado"}">
+                ${c.status === "revoked" ? "Reactivar" : "Revocar"}
+              </button>
+            </div>
+          `).join("")
+        : `<span style="font-size:12px; color:var(--text-soft);">—</span>`;
+
+      return `
+        <tr>
+          <td class="admin-user-cell">
+            <div class="admin-user-name">${esc(u.full_name || "Sin nombre")} ${isSelf ? `<span class="pill" style="font-size:10px;">Tú</span>` : ""}</div>
+            <div class="admin-user-sub">${esc(u.email)}</div>
+            ${u.company ? `<div class="admin-user-sub">${esc(u.company)}</div>` : ""}
+          </td>
+          <td><span class="badge-role ${esc(u.role)}">${roleLabel[u.role] || esc(u.role)}</span></td>
+          <td><span class="pill ${u.banned ? "danger" : "success"}">${u.banned ? "Suspendido" : "Activo"}</span></td>
+          <td style="font-size:12.5px; white-space:nowrap;">
+            <strong>${u.completedTopics}</strong> temas · <strong>${u.examsPassed}</strong> exám.<br/>
+            <span style="color:var(--text-soft);">⏱ ${formatShortDuration(u.totalStudySeconds)}</span>
+          </td>
+          <td>${certsHtml}</td>
+          <td style="font-size:12px; color:var(--text-soft); white-space:nowrap;">${esc(lastLogin)}</td>
+          <td>
+            <div class="admin-actions">
+              <button type="button" class="btn btn-xs" data-adm-edit="${esc(u.id)}" title="Editar nombre, rol o clave">✏️</button>
+              ${!isSelf ? `
+                <button type="button" class="btn btn-xs" data-adm-ban="${esc(u.id)}" data-adm-ban-val="${u.banned ? "0" : "1"}" title="${u.banned ? "Reactivar acceso" : "Suspender acceso"}">${u.banned ? "▶" : "⏸"}</button>
+                <button type="button" class="btn btn-xs btn-danger" data-adm-del="${esc(u.id)}" title="Eliminar usuario definitivamente">🗑️</button>
+              ` : ""}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function wireAdminTableButtons() {
+    elRoot.querySelectorAll("[data-adm-edit]").forEach((btn) => {
+      btn.onclick = () => {
+        const uid = btn.getAttribute("data-adm-edit");
+        const u = adminState.users.find((x) => x.id === uid);
+        if (u) openAdminEditModal(u);
+      };
+    });
+    elRoot.querySelectorAll("[data-adm-ban]").forEach((btn) => {
+      btn.onclick = async () => {
+        const uid = btn.getAttribute("data-adm-ban");
+        const ban = btn.getAttribute("data-adm-ban-val") === "1";
+        btn.disabled = true;
+        const res = await window.CampusCloud.adminCall("toggle_ban", { user_id: uid, ban });
+        if (!res.ok) { toast(res.error || "Error al cambiar estado"); btn.disabled = false; return; }
+        toast(ban ? "Usuario suspendido" : "Usuario reactivado");
+        loadAdminUsers();
+      };
+    });
+    elRoot.querySelectorAll("[data-adm-del]").forEach((btn) => {
+      btn.onclick = async () => {
+        const uid = btn.getAttribute("data-adm-del");
+        const u = adminState.users.find((x) => x.id === uid);
+        if (!window.confirm(`¿Eliminar definitivamente la cuenta de "${u?.email || uid}" y todo su progreso/diplomas? Esta acción no se puede deshacer.`)) return;
+        btn.disabled = true;
+        const res = await window.CampusCloud.adminCall("delete", { user_id: uid });
+        if (!res.ok) { toast(res.error || "No se pudo eliminar"); btn.disabled = false; return; }
+        toast("Usuario eliminado correctamente");
+        loadAdminUsers();
+      };
+    });
+    elRoot.querySelectorAll("[data-adm-cert]").forEach((btn) => {
+      btn.onclick = async () => {
+        const certId = btn.getAttribute("data-adm-cert");
+        const status = btn.getAttribute("data-adm-cert-status");
+        btn.disabled = true;
+        const res = await window.CampusCloud.adminCall("set_cert_status", { cert_id: certId, status });
+        if (!res.ok) { toast(res.error || "Error al actualizar certificado"); btn.disabled = false; return; }
+        toast(status === "revoked" ? `Certificado ${certId} revocado` : `Certificado ${certId} reactivado`);
+        loadAdminUsers();
+      };
+    });
+  }
+
+  function renderAdmin() {
+    if (!isAdmin()) { navigate("catalog"); return; }
+    elCrumb.innerHTML = `<span style="cursor:pointer;" id="crumbAdminCat">🏛️ Programas</span> › <strong>🛡️ Administración de Usuarios</strong>`;
+    document.getElementById("crumbAdminCat").onclick = () => navigate("catalog");
+
+    const st = adminState.stats || {
+      totalUsers: adminState.users.length,
+      students: adminState.users.filter((u) => u.role === "student").length,
+      issuedCerts: 0,
+      totalHours: 0
+    };
+    const filtered = getFilteredAdminUsers();
+    const creds = adminState.lastCreatedCreds;
+    const portalUrl = String(window.CAMPUS_SUPABASE_CONFIG?.publicBaseUrl || window.location.origin).replace(/\/+$/, "/");
+
+    elRoot.innerHTML = `
+      <section class="hero-banner" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #0369a1 100%);">
+        <div class="hero-top">
+          <div>
+            <div class="hero-badge">🛡️ Panel de Administración · Acceso Privado</div>
+            <h1>Gestión de Usuarios, Roles y Diplomas</h1>
+            <p>Crea alumnos, formadores o administradores sin abrir el registro público, consulta su avance en tiempo real y controla la validez pública de los certificados QR.</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" id="adminRefreshBtn" style="background:#fff; color:#0f172a; border:none;">🔄 Actualizar lista</button>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-val">${st.totalUsers}</div><div class="kpi-lbl">Usuarios registrados</div></div>
+          <div class="kpi-card"><div class="kpi-val">${st.students}</div><div class="kpi-lbl">Alumnos activos</div></div>
+          <div class="kpi-card"><div class="kpi-val">${st.issuedCerts}</div><div class="kpi-lbl">Diplomas emitidos</div></div>
+          <div class="kpi-card"><div class="kpi-val">${st.totalHours} h</div><div class="kpi-lbl">Horas de estudio en nube</div></div>
+        </div>
+      </section>
+
+      ${adminState.error ? `
+        <div class="card" style="border-color:var(--gold-border); background:var(--gold-soft);">
+          <h3 style="margin:0 0 6px; color:var(--gold);">⚠️ ${adminState.notDeployed ? "Falta desplegar la Edge Function admin-users en Supabase" : "Aviso del servidor de administración"}</h3>
+          <p style="margin:0 0 8px; font-size:13.5px;">${esc(adminState.error)}</p>
+          <p style="margin:0; font-size:12.5px; color:var(--text-muted);">Despliega el código de <code>supabase/functions/admin-users/index.ts</code> en <strong>Supabase → Edge Functions → admin-users</strong> (desactivando "Verify JWT with legacy secret" si está marcado, porque la función valida el token y tu rol <code>admin</code> internamente).</p>
+        </div>
+      ` : ""}
+
+      <div class="admin-grid">
+        <div class="card">
+          <h3 style="margin:0 0 6px;">➕ Crear nuevo usuario</h3>
+          <p style="margin:0 0 14px; font-size:12.8px; color:var(--text-soft);">El correo queda confirmado al instante y podrá entrar con estas credenciales.</p>
+          ${adminState.createError ? `<div class="auth-msg err">${esc(adminState.createError)}</div>` : ""}
+          <form id="adminCreateForm" class="admin-form-grid">
+            <div class="field-group">
+              <label for="admNewName">Nombre completo (para el diploma)</label>
+              <input class="input" id="admNewName" required placeholder="Ej.: Marta Gómez Serrano" />
+            </div>
+            <div class="field-group">
+              <label for="admNewEmail">Correo electrónico</label>
+              <input class="input" id="admNewEmail" type="email" required placeholder="marta.gomez@empresa.com" />
+            </div>
+            <div class="field-group">
+              <label for="admNewPass">Contraseña inicial (mín. 6 caracteres)</label>
+              <div style="display:flex; gap:6px;">
+                <input class="input" id="admNewPass" type="text" required minlength="6" value="${esc(generateStrongPassword(12))}" />
+                <button type="button" class="btn" id="admGenPassBtn" title="Generar nueva contraseña segura">🎲</button>
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="admNewCompany">Empresa / Cargo (opcional)</label>
+              <input class="input" id="admNewCompany" placeholder="Ej.: Directora Comercial" />
+            </div>
+            <div class="field-group">
+              <label for="admNewRole">Rol asignado</label>
+              <select class="input" id="admNewRole">
+                <option value="student">🎓 Alumno (sin botones QA)</option>
+                <option value="trainer">👩‍🏫 Formador</option>
+                <option value="admin">🛡️ Administrador</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" id="admCreateSubmitBtn" style="justify-content:center; padding:10px 14px; margin-top:4px;">✨ Crear cuenta ahora</button>
+          </form>
+
+          ${creds ? `
+            <div class="creds-copy-box">
+              <div style="font-weight:800; color:var(--success); margin-bottom:6px;">✅ Cuenta creada y lista para enviar</div>
+              <div><strong>Acceso:</strong> <code>${esc(portalUrl)}</code></div>
+              <div><strong>Correo:</strong> <code>${esc(creds.email)}</code></div>
+              <div><strong>Clave:</strong> <code>${esc(creds.password)}</code></div>
+              <button type="button" class="btn btn-success btn-xs" id="admCopyCredsBtn" style="margin-top:8px;">📋 Copiar mensaje de bienvenida</button>
+            </div>
+          ` : ""}
+        </div>
+
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <h3 style="margin:0;">👥 Usuarios registrados (<span id="adminUsersCount">${filtered.length}</span>)</h3>
+          </div>
+          <div class="admin-toolbar">
+            <input class="input" id="adminSearchInput" style="flex:1; min-width:200px;" value="${esc(adminState.search)}" placeholder="Buscar por nombre, correo o empresa…" />
+            <select class="input" id="adminRoleFilter" style="width:auto; min-width:150px;">
+              <option value="all" ${adminState.roleFilter === "all" ? "selected" : ""}>Todos los roles</option>
+              <option value="student" ${adminState.roleFilter === "student" ? "selected" : ""}>🎓 Alumnos</option>
+              <option value="trainer" ${adminState.roleFilter === "trainer" ? "selected" : ""}>👩‍🏫 Formadores</option>
+              <option value="admin" ${adminState.roleFilter === "admin" ? "selected" : ""}>🛡️ Administradores</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Progreso</th><th>Certificados QR</th><th>Último acceso</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="adminUsersTbody">${buildAdminTableRowsHtml(filtered)}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("adminRefreshBtn").onclick = loadAdminUsers;
+    document.getElementById("admGenPassBtn").onclick = () => {
+      document.getElementById("admNewPass").value = generateStrongPassword(12);
+    };
+
+    const copyBtn = document.getElementById("admCopyCredsBtn");
+    if (copyBtn && creds) {
+      copyBtn.onclick = async () => {
+        const txt = `Hola ${creds.name},\n\nYa tienes activo tu acceso al Campus de Certificaciones Ejecutivas:\n- Web: ${portalUrl}\n- Correo: ${creds.email}\n- Contraseña: ${creds.password}\n\nTe recomendamos cambiar tu contraseña si lo deseas desde la opción "Recuperar clave".`;
+        try { await navigator.clipboard.writeText(txt); toast("Credenciales copiadas al portapapeles"); }
+        catch { toast("Copiado: " + creds.email); }
+      };
+    }
+
+    document.getElementById("adminCreateForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("admNewName").value.trim();
+      const email = document.getElementById("admNewEmail").value.trim();
+      const password = document.getElementById("admNewPass").value;
+      const company = document.getElementById("admNewCompany").value.trim();
+      const role = document.getElementById("admNewRole").value;
+      const subBtn = document.getElementById("admCreateSubmitBtn");
+      adminState.createError = "";
+      subBtn.disabled = true;
+
+      const res = await window.CampusCloud.adminCall("create", {
+        full_name: name,
+        email,
+        password,
+        company,
+        role
+      });
+      subBtn.disabled = false;
+
+      if (!res.ok) {
+        adminState.createError = res.error || "No se pudo crear el usuario.";
+        renderAdmin();
+        return;
+      }
+
+      adminState.lastCreatedCreds = { name, email, password, role };
+      toast(`Usuario ${email} creado correctamente`);
+      await loadAdminUsers();
+    };
+
+    const searchInp = document.getElementById("adminSearchInput");
+    const roleSel = document.getElementById("adminRoleFilter");
+    function refreshFilteredRowsOnly() {
+      const list = getFilteredAdminUsers();
+      const tbody = document.getElementById("adminUsersTbody");
+      const cnt = document.getElementById("adminUsersCount");
+      if (cnt) cnt.textContent = String(list.length);
+      if (tbody) {
+        tbody.innerHTML = buildAdminTableRowsHtml(list);
+        wireAdminTableButtons();
+      }
+    }
+    searchInp.oninput = (e) => { adminState.search = e.target.value; refreshFilteredRowsOnly(); };
+    roleSel.onchange = (e) => { adminState.roleFilter = e.target.value; refreshFilteredRowsOnly(); };
+    wireAdminTableButtons();
+  }
+
+  // =====================================================
   // MAIN RENDER ROUTER
   // =====================================================
   function render() {
+    updateRoleRestrictedUI();
+
+    if (cloudState.booting || isLockedByClosedAccess()) {
+      renderClosedGate();
+      return;
+    }
+
     renderSidebar();
     document.getElementById("roleStudentBtn").classList.toggle("active", ui.role === "student");
     document.getElementById("roleTrainerBtn").classList.toggle("active", ui.role === "trainer");
 
+    if (ui.view === "admin") { renderAdmin(); return; }
     if (ui.view === "catalog") renderCatalog();
     else if (ui.view === "dashboard") renderDashboard();
     else if (ui.view === "topic") renderTopic();
@@ -2866,10 +3343,60 @@
     toast(timerState.manualPaused ? "Cronómetro pausado" : "Cronómetro reanudado");
   };
 
-  // QA Modal (operates cleanly on active program + syncs to cloud when signed in)
+  // Admin Edit User Modal + Admin Button
+  if (elOpenAdminBtn) {
+    elOpenAdminBtn.onclick = () => navigate("admin");
+  }
+  const adminEditModal = document.getElementById("adminEditUserModal");
+  const adminEditMsg = document.getElementById("adminEditMsg");
+  function openAdminEditModal(u) {
+    document.getElementById("adminEditUserId").value = u.id;
+    document.getElementById("adminEditEmailLine").textContent = `Cuenta: ${u.email}`;
+    document.getElementById("adminEditName").value = u.full_name || "";
+    document.getElementById("adminEditCompany").value = u.company || "";
+    document.getElementById("adminEditRole").value = u.role || "student";
+    document.getElementById("adminEditPassword").value = "";
+    showAuthMsg(adminEditMsg, "", "");
+    adminEditModal.classList.add("open");
+  }
+  function closeAdminEditModal() { adminEditModal.classList.remove("open"); }
+  document.getElementById("closeAdminEditBtn").onclick = closeAdminEditModal;
+  document.getElementById("closeAdminEditXBtn").onclick = closeAdminEditModal;
+  adminEditModal.onclick = (e) => { if (e.target === adminEditModal) closeAdminEditModal(); };
+  document.getElementById("adminEditForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const userId = document.getElementById("adminEditUserId").value;
+    const fullName = document.getElementById("adminEditName").value.trim();
+    const company = document.getElementById("adminEditCompany").value.trim();
+    const role = document.getElementById("adminEditRole").value;
+    const newPassword = document.getElementById("adminEditPassword").value;
+    const btn = document.getElementById("saveAdminEditBtn");
+    showAuthMsg(adminEditMsg, "", "");
+    btn.disabled = true;
+
+    const res = await window.CampusCloud.adminCall("update", {
+      user_id: userId,
+      full_name: fullName,
+      company,
+      role,
+      new_password: newPassword
+    });
+    btn.disabled = false;
+
+    if (!res.ok) {
+      showAuthMsg(adminEditMsg, "err", res.error || "No se pudo actualizar el usuario.");
+      return;
+    }
+    closeAdminEditModal();
+    toast("Usuario actualizado correctamente");
+    await loadAdminUsers();
+  };
+
+  // QA Modal (strictly restricted to admin role when cloud auth is active)
   const qaModal = document.getElementById("qaModal");
   document.getElementById("openQaBtn").onclick = () => {
-    if (ui.view === "catalog" || !window.PROGRAMS?.[ui.programId]) {
+    if (!isAdmin()) { toast("Solo disponible para administradores"); return; }
+    if (ui.view === "catalog" || ui.view === "admin" || !window.PROGRAMS?.[ui.programId]) {
       toast(`Entra primero en uno de los ${PROGRAM_ORDER.length} programas para simular su progreso`);
       return;
     }
@@ -2879,6 +3406,7 @@
   qaModal.onclick = (e) => { if (e.target === qaModal) qaModal.classList.remove("open"); };
 
   document.getElementById("qaSim1Btn").onclick = async () => {
+    if (!isAdmin()) return;
     await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB(); const b1 = prog.blocks[0];
     const set = new Set(pdb.completedTopics);
@@ -2896,6 +3424,7 @@
   };
 
   document.getElementById("qaSim9Btn").onclick = async () => {
+    if (!isAdmin()) return;
     await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB();
     const lastBlock = prog.blocks[prog.blocks.length - 1];
@@ -2924,6 +3453,7 @@
   };
 
   document.getElementById("qaUnlockAllBtn").onclick = async () => {
+    if (!isAdmin()) return;
     await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB();
     pdb.completedTopics = getFlatTopics(ui.programId).map((t) => t.id);
@@ -2949,6 +3479,7 @@
   };
 
   document.getElementById("qaResetBtn").onclick = () => {
+    if (!isAdmin()) return;
     db.programs[ui.programId] = makeEmptyProgramState();
     ui.examDraft = {};
     timerState.currentSessionSeconds = 0;
@@ -2987,20 +3518,17 @@
   }
 
   function setAuthMode(mode) {
-    authMode = mode;
+    authMode = mode === "reset" ? "reset" : "login";
     document.querySelectorAll("[data-auth-tab]").forEach((b) => {
-      b.classList.toggle("active", b.getAttribute("data-auth-tab") === mode);
+      b.classList.toggle("active", b.getAttribute("data-auth-tab") === authMode);
     });
-    document.getElementById("authNameGroup").style.display = mode === "signup" ? "block" : "none";
     const passGrp = document.getElementById("authPassGroup");
     const passInp = document.getElementById("authPassword");
-    passGrp.style.display = mode === "reset" ? "none" : "block";
-    passInp.required = mode !== "reset";
-    passInp.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    passGrp.style.display = authMode === "reset" ? "none" : "block";
+    passInp.required = authMode !== "reset";
+    passInp.autocomplete = "current-password";
     document.getElementById("authSubmitBtn").textContent =
-      mode === "login" ? "Entrar en mi cuenta"
-      : mode === "signup" ? "Crear cuenta gratis"
-      : "Enviar enlace de recuperación";
+      authMode === "login" ? "Entrar en mi cuenta" : "Enviar enlace de recuperación";
     showAuthMsg(authMsg, "", "");
   }
 
@@ -3079,7 +3607,6 @@
     }
     const email = document.getElementById("authEmail").value.trim();
     const password = document.getElementById("authPassword").value;
-    const fullName = document.getElementById("authFullName").value.trim();
     const submitBtn = document.getElementById("authSubmitBtn");
     submitBtn.disabled = true;
 
@@ -3087,16 +3614,6 @@
       if (authMode === "login") {
         const res = await window.CampusCloud.signIn({ email, password });
         if (!res.ok) { showAuthMsg(authMsg, "err", res.error); return; }
-        await handleSignedIn(res.user);
-        closeAuthModal();
-      } else if (authMode === "signup") {
-        if (!fullName) { showAuthMsg(authMsg, "err", "Escribe tu nombre completo para los diplomas."); return; }
-        const res = await window.CampusCloud.signUp({ email, password, fullName });
-        if (!res.ok) { showAuthMsg(authMsg, "err", res.error); return; }
-        if (res.needsEmailConfirm) {
-          showAuthMsg(authMsg, "ok", "Cuenta creada. Revisa tu bandeja de correo y pulsa el enlace de confirmación antes de iniciar sesión.");
-          return;
-        }
         await handleSignedIn(res.user);
         closeAuthModal();
       } else if (authMode === "reset") {
@@ -3147,8 +3664,8 @@
       const cachedUserDb = loadPersisted(user.id);
       const cloudDb = await window.CampusCloud.loadUserState(PROGRAM_ORDER, makeDefaultProfile());
 
-      // Combine user offline cache + unmigrated Guest work without overwriting across accounts
-      const hasGuestWork = hasMeaningfulProgress(guestDb);
+      // Combine user offline cache + unmigrated Guest work without leaking across closed-access accounts
+      const hasGuestWork = !window.CampusCloud?.isClosedAccess?.() && hasMeaningfulProgress(guestDb);
       const baseLocal = hasGuestWork ? guestDb : cachedUserDb;
       if (hasGuestWork && hasMeaningfulProgress(cachedUserDb)) {
         const firstPass = await window.CampusCloud.mergeAndPushState(cachedUserDb, cloudDb, PROGRAM_ORDER, CATALOG);
@@ -3180,6 +3697,7 @@
       toast("No se pudo sincronizar completamente con Supabase");
     } finally {
       cloudState.syncing = false;
+      cloudState.booting = false;
       updateCloudTopbarUI();
       if (authModal.classList.contains("open")) refreshAuthModalState();
       if (ui.view === "verify" && verifyState.query) runPublicVerify(verifyState.query);
@@ -3219,10 +3737,15 @@
 
   async function initApp() {
     let urlVerifyCode = "";
+    let wantAdminView = false;
     try {
       const sp = new URLSearchParams(window.location.search);
       urlVerifyCode = (sp.get("verify") || "").trim().toUpperCase();
+      wantAdminView = sp.get("view") === "admin" || window.location.hash === "#admin";
     } catch {}
+
+    cloudState.configured = Boolean(window.CampusCloud?.isConfigured?.());
+    cloudState.booting = Boolean(cloudState.configured && window.CampusCloud?.isClosedAccess?.() && !urlVerifyCode);
 
     if (urlVerifyCode) {
       ui.view = "verify";
@@ -3241,6 +3764,7 @@
             cloudState.user = null;
             cloudState.syncStatus = "local";
             db = loadPersisted(null);
+            if (ui.view === "admin") ui.view = "catalog";
             updateCloudTopbarUI();
             render();
             updateTimerUI();
@@ -3253,13 +3777,20 @@
         }
       );
       cloudState.configured = Boolean(res?.configured);
+      cloudState.booting = false;
       if (res?.user) {
         await handleSignedIn(res.user, { silent: true });
+        if (wantAdminView && isAdmin() && !urlVerifyCode) {
+          await navigate("admin");
+        }
       } else {
         updateCloudTopbarUI();
+        render();
       }
     } else {
+      cloudState.booting = false;
       updateCloudTopbarUI();
+      render();
     }
 
     if (urlVerifyCode) {

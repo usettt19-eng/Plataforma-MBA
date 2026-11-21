@@ -747,8 +747,60 @@
     }
   }
 
+  function isClosedAccess() {
+    const cfg = getCfg();
+    return Boolean(cfg.closedAccess !== false && isConfigured());
+  }
+
+  async function adminCall(action, payload = {}) {
+    const sb = ensureClient();
+    const cfg = getCfg();
+    if (!sb || !cfg.url || !cfg.publishableKey) {
+      return { ok: false, status: 0, error: "Supabase no está configurado." };
+    }
+    try {
+      const { data: sessData } = await sb.auth.getSession();
+      const token = sessData?.session?.access_token;
+      if (!token) {
+        return { ok: false, status: 401, error: "No hay sesión activa de administrador." };
+      }
+
+      const endpoint = `${String(cfg.url).replace(/\/+$/, "")}/functions/v1/admin-users`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": cfg.publishableKey.trim(),
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(Object.assign({ action }, payload || {}))
+      });
+
+      let parsed = {};
+      try { parsed = await res.json(); } catch {}
+
+      if (!res.ok || parsed.ok === false) {
+        return {
+          ok: false,
+          status: res.status,
+          notDeployed: res.status === 404,
+          error: parsed.error || parsed.message || `Error HTTP ${res.status} al invocar admin-users.`
+        };
+      }
+      return Object.assign({ ok: true, status: res.status }, parsed);
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        notDeployed: false,
+        error: "No se pudo conectar con la Edge Function admin-users (verifica si ya está desplegada en Supabase)."
+      };
+    }
+  }
+
   window.CampusCloud = {
     isConfigured,
+    isClosedAccess,
     init,
     getUser,
     getSession,
@@ -769,6 +821,7 @@
     syncCertificate,
     syncProgramBatch,
     resetProgramCloud,
-    verifyCertificatePublic
+    verifyCertificatePublic,
+    adminCall
   };
 })();
