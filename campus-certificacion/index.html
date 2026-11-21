@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal de Certificaciones Ejecutivas Online — Campus Interactivo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand" id="goCatalogBrand" title="Volver al selector de programas">
+      <div class="brand-mark" id="sidebarBrandMark">🏛️</div>
+      <div>
+        <div class="brand-name" id="sidebarBrandName">Portal de Certificaciones</div>
+        <div class="brand-tag" id="sidebarBrandTag">2 programas · 127 temas</div>
+      </div>
+    </div>
+
+    <div class="sidebar-progress">
+      <div class="prog-row">
+        <span id="sidebarProgTitle">Avance del programa</span>
+        <strong id="sidebarProgLabel">0%</strong>
+      </div>
+      <div class="prog-track"><div class="prog-bar" id="sidebarProgBar" style="width:0%"></div></div>
+      <div class="sidebar-time-row" id="sidebarTimeBtn" title="Ver desglose detallado de tiempo de estudio">
+        <span>⏱ Tiempo acumulado</span>
+        <strong id="sidebarTimeLabel">00:00:00</strong>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn" id="toggleSidebarBtn" title="Mostrar u ocultar menú">☰</button>
+        <button class="btn" id="topCatalogBtn" title="Elegir o cambiar de programa certificado">🏛️ Programas</button>
+        <div class="crumb" id="crumb"><strong>Portal de Certificaciones Online</strong></div>
+      </div>
+      <div class="topbar-right">
+        <button class="timer-pill" id="topTimerPill" title="Tiempo real de estudio acumulado — clic para ver historial y pausar/reanudar">
+          <span class="timer-dot" id="topTimerDot"></span>
+          <span id="topTimerValue">00:00:00</span>
+          <span class="timer-state" id="topTimerState">En espera</span>
+        </button>
+        <div class="role-switch" title="Cambia entre experiencia del alumno y guía docente completa">
+          <button class="role-btn active" id="roleStudentBtn">🎓 Alumno</button>
+          <button class="role-btn" id="roleTrainerBtn">👩‍🏫 Formador</button>
+        </div>
+        <button class="btn btn-gold" id="openQaBtn" title="Herramientas rápidas para probar exámenes y certificado">🧪 Pruebas</button>
+        <button class="btn" id="openProfileBtn" title="Editar datos del titular del certificado">👤 <span id="topStudentName">Alumno</span></button>
+        <button class="btn" id="themeBtn" title="Cambiar modo claro/oscuro">🌓</button>
+      </div>
+    </header>
+
+    <main class="viewport" id="viewport">
+      <div class="container" id="appRoot"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-bg" id="profileModal">
+  <div class="modal-box">
+    <h3>Perfil del alumno y personalización del certificado</h3>
+    <p style="margin:0 0 14px; font-size:13px; color:var(--text-soft);">Estos datos aparecerán en tu progreso, portafolio descargable y diploma oficial.</p>
+    <div class="field-group">
+      <label for="profName">Nombre completo del alumno</label>
+      <input class="input" id="profName" placeholder="Ej.: Laura Martínez Gómez" />
+    </div>
+    <div class="field-group">
+      <label for="profEmail">Correo electrónico</label>
+      <input class="input" id="profEmail" placeholder="laura.martinez@empresa.es" />
+    </div>
+    <div class="field-group">
+      <label for="profCompany">Empresa / Rol (opcional)</label>
+      <input class="input" id="profCompany" placeholder="Ej.: Responsable de Operaciones · Pyme Industrial" />
+    </div>
+    <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;" />
+    <div class="field-group">
+      <label for="profOrg">Institución / Academia emisora del certificado</label>
+      <input class="input" id="profOrg" placeholder="Escuela Ejecutiva de Dirección e Innovación Digital" />
+    </div>
+    <div class="field-group">
+      <label for="profSigner">Nombre y cargo del firmante</label>
+      <input class="input" id="profSigner" placeholder="Dirección Académica · Programa Ejecutivo" />
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+      <button class="btn" id="closeProfileBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveProfileBtn">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- QA Demo Tools Modal -->
+<div class="modal-bg" id="qaModal">
+  <div class="modal-box">
+    <h3>🧪 Panel de Pruebas Rápidas (Modo Demo)</h3>
+    <p style="margin:0 0 16px; font-size:13px; color:var(--text-soft);">Usa estos accesos rápidos para probar el flujo completo de certificación sin tener que completar manualmente los 57 temas.</p>
+    <div style="display:grid; gap:10px;">
+      <button class="btn" id="qaSim1Btn" style="justify-content:flex-start;">
+        ⚡ Simular Bloque 1 completado y aprobado (80 %)
+      </button>
+      <button class="btn btn-primary" id="qaSim9Btn" style="justify-content:flex-start;">
+        🎯 Simular casi todo aprobado (te deja listo el último Examen de Bloque para desbloquear el diploma en vivo)
+      </button>
+      <button class="btn btn-gold" id="qaUnlockAllBtn" style="justify-content:flex-start;">
+        🎓 Completar 100 % del programa y abrir Certificado Oficial + Verificación QR
+      </button>
+      <button class="btn btn-danger" id="qaResetBtn" style="justify-content:flex-start;">
+        🗑️ Reiniciar todo el progreso a 0 %
+      </button>
+    </div>
+    <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+      <button class="btn" id="closeQaBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Study Time Breakdown Modal -->
+<div class="modal-bg" id="studyTimeModal">
+  <div class="modal-box" style="max-width:680px; max-height:86vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+      <h3 style="margin:0;">⏱ Registro de Tiempo de Estudio</h3>
+      <button class="btn" id="togglePauseTimerBtn">⏸ Pausar contador</button>
+    </div>
+    <p style="margin:0 0 14px; font-size:13px; color:var(--text-soft);">El cronómetro cuenta automáticamente cuando estás activo en una <strong>clase, taller o examen</strong>, y se pausa solo si cambias de pestaña o pasas 3 minutos sin actividad (control anti-inactividad).</p>
+    <div id="studyTimeModalBody"></div>
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+      <button class="btn" id="closeStudyTimeBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data/program-dind.js"></script>
+<script src="data/program-gmba.js"></script>
+<script src="data/program-pmp.js"></script>
+<script src="data/program-emba.js"></script>
+<script src="data/assessments-data.js"></script>
+<script src="data/assessments-mba.js"></script>
+<script src="data/assessments-pmp.js"></script>
+<script src="data/assessments-emba.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
