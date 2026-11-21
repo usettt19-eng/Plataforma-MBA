@@ -799,6 +799,61 @@
     }
   }
 
+  async function listAdminLeads() {
+    const sb = ensureClient();
+    if (!sb || !currentUser) {
+      return { ok: false, leads: [], error: "No hay sesión activa de administrador." };
+    }
+    try {
+      const { data, error } = await sb
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) return { ok: false, leads: [], error: translateAuthError(error) };
+      return { ok: true, leads: Array.isArray(data) ? data : [] };
+    } catch (err) {
+      return { ok: false, leads: [], error: translateAuthError(err) };
+    }
+  }
+
+  async function updateAdminLeadStatus(leadId, status) {
+    const sb = ensureClient();
+    if (!sb || !currentUser) return { ok: false, error: "No hay sesión activa de administrador." };
+    const cleanId = String(leadId || "").trim();
+    const cleanStatus = String(status || "").trim();
+    if (!cleanId || !["new", "contacted", "enrolled", "archived"].includes(cleanStatus)) {
+      return { ok: false, error: "Identificador o estado de solicitud no válido." };
+    }
+    try {
+      const { error } = await sb
+        .from("leads")
+        .update({ status: cleanStatus })
+        .eq("id", cleanId);
+      if (error) return { ok: false, error: translateAuthError(error) };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: translateAuthError(err) };
+    }
+  }
+
+  async function deleteAdminLead(leadId) {
+    const sb = ensureClient();
+    if (!sb || !currentUser) return { ok: false, error: "No hay sesión activa de administrador." };
+    const cleanId = String(leadId || "").trim();
+    if (!cleanId) return { ok: false, error: "Identificador de solicitud no válido." };
+    try {
+      const { error } = await sb
+        .from("leads")
+        .delete()
+        .eq("id", cleanId);
+      if (error) return { ok: false, error: translateAuthError(error) };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: translateAuthError(err) };
+    }
+  }
+
   window.CampusCloud = {
     isConfigured,
     isClosedAccess,
@@ -823,6 +878,9 @@
     syncProgramBatch,
     resetProgramCloud,
     verifyCertificatePublic,
-    adminCall
+    adminCall,
+    listAdminLeads,
+    updateAdminLeadStatus,
+    deleteAdminLead
   };
 })();

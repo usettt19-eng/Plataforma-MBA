@@ -861,6 +861,49 @@ html, body {
   background: var(--surface); border: 1px solid var(--border);
   padding: 2px 6px; border-radius: 5px; font-size: 12.2px;
 }
+.kpi-card.clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.kpi-card.clickable:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.18);
+}
+.admin-subtabs {
+  display: inline-flex; gap: 6px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 5px; margin: 16px 0;
+  box-shadow: var(--shadow);
+}
+.admin-subtab {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; background: transparent; color: var(--text-muted);
+  border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.admin-subtab:hover { background: var(--surface-2); color: var(--text); }
+.admin-subtab.active {
+  background: var(--primary); color: #fff; box-shadow: var(--shadow);
+}
+.lead-badge-new {
+  background: #dc2626; color: #fff; font-size: 11px; font-weight: 800;
+  padding: 1px 7px; border-radius: 999px; line-height: 1.4;
+}
+.admin-subtab.active .lead-badge-new {
+  background: #fde047; color: #0f172a;
+}
+.lead-msg-cell {
+  max-width: 240px; font-size: 12.2px; color: var(--text-muted);
+  line-height: 1.4; white-space: pre-wrap; word-break: break-word;
+}
+.lead-status-sel {
+  width: auto; min-width: 145px; font-size: 12px; font-weight: 700;
+  padding: 5px 8px; border-radius: 8px;
+}
+.lead-status-sel.st-new { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-border); }
+.lead-status-sel.st-contacted { background: var(--gold-soft); color: var(--gold); border-color: var(--gold-border); }
+.lead-status-sel.st-enrolled { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
+.lead-status-sel.st-archived { background: var(--surface-2); color: var(--text-soft); border-color: var(--border); }
 
 @media (max-width: 1080px) {
   .admin-grid { grid-template-columns: 1fr; }

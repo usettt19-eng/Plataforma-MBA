@@ -230,6 +230,7 @@
   };
 
   const adminState = {
+    tab: "users", // users | leads
     loading: false,
     notDeployed: false,
     error: "",
@@ -238,7 +239,13 @@
     search: "",
     roleFilter: "all",
     lastCreatedCreds: null,
-    createError: ""
+    prefillUser: null,
+    createError: "",
+    leadsLoading: false,
+    leadsError: "",
+    leads: [],
+    leadsSearch: "",
+    leadsStatusFilter: "all"
   };
 
   let navNonce = 0;
@@ -1132,6 +1139,7 @@
       updateTimerUI();
       elViewport.scrollTop = 0;
       loadAdminUsers();
+      loadAdminLeads();
       return;
     }
 
@@ -2964,6 +2972,22 @@
     if (ui.view === "admin") renderAdmin();
   }
 
+  async function loadAdminLeads() {
+    if (!isAdmin() || !cloudState.configured || !window.CampusCloud?.listAdminLeads) return;
+    adminState.leadsLoading = true;
+    adminState.leadsError = "";
+    if (ui.view === "admin") renderAdmin();
+
+    const res = await window.CampusCloud.listAdminLeads();
+    adminState.leadsLoading = false;
+    if (!res.ok) {
+      adminState.leadsError = res.error || "No se pudo cargar las solicitudes de la landing page.";
+    } else {
+      adminState.leads = Array.isArray(res.leads) ? res.leads : [];
+    }
+    if (ui.view === "admin") renderAdmin();
+  }
+
   function getFilteredAdminUsers() {
     const q = (adminState.search || "").trim().toLowerCase();
     const rf = adminState.roleFilter || "all";
@@ -3071,6 +3095,173 @@
     });
   }
 
+  const LEAD_PROG_LABELS = {
+    all: "🌟 Pase All-Access (4 programas)",
+    dind: "🚀 DIND (228 h)",
+    gmba: "💼 Global MBA (90 ECTS)",
+    pmp: "📐 Preparación PMP (108 h)",
+    emba: "🏛️ Executive MBA (19 créd.)"
+  };
+  const LEAD_PLAN_LABELS = {
+    allAccess: "Pase All-Access",
+    individual: "1 Programa",
+    corporate: "Corporativo B2B"
+  };
+
+  function cleanPhoneDigits(phone) {
+    return String(phone || "").replace(/[^\d]/g, "");
+  }
+
+  function getFilteredAdminLeads() {
+    const q = (adminState.leadsSearch || "").trim().toLowerCase();
+    const sf = adminState.leadsStatusFilter || "all";
+    return (adminState.leads || []).filter((l) => {
+      if (sf !== "all" && (l.status || "new") !== sf) return false;
+      if (!q) return true;
+      return `${l.full_name || ""} ${l.email || ""} ${l.phone || ""} ${l.company || ""} ${l.program_interest || ""} ${l.plan_interest || ""} ${l.message || ""} ${l.utm_source || ""} ${l.utm_campaign || ""}`
+        .toLowerCase()
+        .includes(q);
+    });
+  }
+
+  function buildLeadReplyWaHref(lead) {
+    const digits = cleanPhoneDigits(lead?.phone);
+    if (digits.length < 7) return "";
+    const progLabel = LEAD_PROG_LABELS[lead?.program_interest] || lead?.program_interest || "nuestros programas ejecutivos";
+    const text = `Hola ${lead?.full_name || ""}, te saludamos de USE Services Business School respecto a tu solicitud de admisión para ${progLabel}. ¿Cómo podemos ayudarte a activar tu plaza?`;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+  }
+
+  function buildAdminLeadsRowsHtml(rows) {
+    if (adminState.leadsLoading && !adminState.leads.length) {
+      return `<tr><td colspan="6" style="text-align:center; padding:26px; color:var(--text-soft);">Cargando solicitudes de la landing page…</td></tr>`;
+    }
+    if (!rows.length) {
+      return `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-soft);">No hay solicitudes que coincidan con el filtro actual.</td></tr>`;
+    }
+    const existingEmails = new Set(
+      (adminState.users || [])
+        .map((u) => String(u.email || "").trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    return rows.map((l) => {
+      const st = ["new", "contacted", "enrolled", "archived"].includes(l.status) ? l.status : "new";
+      const isAlreadyUser = existingEmails.has(String(l.email || "").trim().toLowerCase());
+      const progText = LEAD_PROG_LABELS[l.program_interest] || l.program_interest || "—";
+      const planText = LEAD_PLAN_LABELS[l.plan_interest] || l.plan_interest || "—";
+      const dateStr = l.created_at
+        ? new Date(l.created_at).toLocaleString("es-ES", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })
+        : "—";
+      const waHref = buildLeadReplyWaHref(l);
+      const utmParts = [l.utm_source, l.utm_medium, l.utm_campaign].filter(Boolean);
+      const utmLine = utmParts.length ? `UTM: ${utmParts.join(" / ")}` : "";
+      const mailHref = `mailto:${encodeURIComponent(l.email || "")}?subject=${encodeURIComponent("USE Services Business School — Tu solicitud de admisión")}`;
+
+      return `
+        <tr>
+          <td class="admin-user-cell">
+            <div class="admin-user-name">${esc(l.full_name || "Sin nombre")} ${isAlreadyUser ? `<span class="pill success" style="font-size:10.5px;">🎓 Ya es alumno</span>` : ""}</div>
+            <div class="admin-user-sub">${esc(l.email || "")}</div>
+            ${l.phone ? `<div class="admin-user-sub">📞 ${esc(l.phone)}</div>` : ""}
+            ${l.company ? `<div class="admin-user-sub">🏢 ${esc(l.company)}</div>` : ""}
+          </td>
+          <td style="font-size:12.5px;">
+            <span class="pill" style="font-size:11.5px; margin-bottom:4px;">${esc(progText)}</span>
+            <div class="admin-user-sub">${esc(planText)}</div>
+            ${utmLine ? `<div class="admin-user-sub" style="font-size:11px;">${esc(utmLine)}</div>` : ""}
+          </td>
+          <td><div class="lead-msg-cell">${l.message ? esc(l.message) : `<span style="color:var(--text-soft);">—</span>`}</div></td>
+          <td style="font-size:12px; color:var(--text-soft); white-space:nowrap;">${esc(dateStr)}</td>
+          <td>
+            <select class="input lead-status-sel st-${esc(st)}" data-lead-status="${esc(l.id)}" aria-label="Estado de solicitud">
+              <option value="new" ${st === "new" ? "selected" : ""}>🆕 Nuevo</option>
+              <option value="contacted" ${st === "contacted" ? "selected" : ""}>📞 Contactado</option>
+              <option value="enrolled" ${st === "enrolled" ? "selected" : ""}>✅ Matriculado</option>
+              <option value="archived" ${st === "archived" ? "selected" : ""}>📦 Archivado</option>
+            </select>
+          </td>
+          <td>
+            <div class="admin-actions">
+              <button type="button" class="btn btn-xs btn-primary" data-lead-convert="${esc(l.id)}" title="Prellenar formulario para dar de alta como alumno">✨ Crear alumno</button>
+              ${waHref ? `<a class="btn btn-xs btn-success" href="${esc(waHref)}" target="_blank" rel="noopener" title="Responder por WhatsApp">💬</a>` : ""}
+              <a class="btn btn-xs" href="${esc(mailHref)}" title="Responder por correo">✉️</a>
+              <button type="button" class="btn btn-xs btn-danger" data-lead-del="${esc(l.id)}" title="Eliminar solicitud">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function wireAdminLeadsButtons() {
+    elRoot.querySelectorAll("[data-lead-status]").forEach((sel) => {
+      sel.onchange = async () => {
+        const leadId = sel.getAttribute("data-lead-status");
+        const nextStatus = sel.value;
+        const lead = (adminState.leads || []).find((x) => x.id === leadId);
+        const prevStatus = lead?.status || "new";
+        sel.disabled = true;
+        const res = await window.CampusCloud.updateAdminLeadStatus(leadId, nextStatus);
+        sel.disabled = false;
+        if (!res.ok) {
+          sel.value = prevStatus;
+          toast(res.error || "No se pudo actualizar el estado");
+          return;
+        }
+        if (lead) lead.status = nextStatus;
+        sel.className = `input lead-status-sel st-${nextStatus}`;
+        toast("Estado de solicitud actualizado");
+        const prevScroll = elViewport.scrollTop;
+        renderAdmin();
+        elViewport.scrollTop = prevScroll;
+      };
+    });
+
+    elRoot.querySelectorAll("[data-lead-convert]").forEach((btn) => {
+      btn.onclick = () => {
+        const leadId = btn.getAttribute("data-lead-convert");
+        const lead = (adminState.leads || []).find((x) => x.id === leadId);
+        if (!lead) return;
+        adminState.prefillUser = {
+          leadId: lead.id,
+          name: lead.full_name || "",
+          email: lead.email || "",
+          company: lead.company || "",
+          phone: lead.phone || "",
+          program: lead.program_interest || "all",
+          plan: lead.plan_interest || "allAccess"
+        };
+        adminState.createError = "";
+        adminState.tab = "users";
+        renderAdmin();
+        elViewport.scrollTop = 0;
+        document.getElementById("admNewPass")?.focus();
+        toast("Datos cargados para crear alumno");
+      };
+    });
+
+    elRoot.querySelectorAll("[data-lead-del]").forEach((btn) => {
+      btn.onclick = async () => {
+        const leadId = btn.getAttribute("data-lead-del");
+        const lead = (adminState.leads || []).find((x) => x.id === leadId);
+        if (!window.confirm(`¿Eliminar la solicitud de "${lead?.full_name || lead?.email || leadId}"? Esta acción no se puede deshacer.`)) return;
+        btn.disabled = true;
+        const res = await window.CampusCloud.deleteAdminLead(leadId);
+        if (!res.ok) {
+          btn.disabled = false;
+          toast(res.error || "No se pudo eliminar la solicitud");
+          return;
+        }
+        adminState.leads = (adminState.leads || []).filter((x) => x.id !== leadId);
+        toast("Solicitud eliminada");
+        const prevScroll = elViewport.scrollTop;
+        renderAdmin();
+        elViewport.scrollTop = prevScroll;
+      };
+    });
+  }
+
   function renderAdmin() {
     if (!isAdmin()) { navigate("catalog"); return; }
     elCrumb.innerHTML = `<span style="cursor:pointer;" id="crumbAdminCat">🏛️ Programas</span> › <strong>🛡️ Administración de Usuarios</strong>`;
@@ -3083,19 +3274,31 @@
       totalHours: 0
     };
     const filtered = getFilteredAdminUsers();
+    const filteredLeads = getFilteredAdminLeads();
+    const newLeadsCount = (adminState.leads || []).filter((l) => (l.status || "new") === "new").length;
+    const totalLeadsCount = (adminState.leads || []).length;
     const creds = adminState.lastCreatedCreds;
+    const prefill = adminState.prefillUser;
     const portalUrl = String(window.CAMPUS_SUPABASE_CONFIG?.publicBaseUrl || window.location.origin).replace(/\/+$/, "/");
+    const activeTab = adminState.tab === "leads" ? "leads" : "users";
+    const welcomeMsg = creds
+      ? `Hola ${creds.name},\n\nYa tienes activo tu acceso al Campus de Certificaciones Ejecutivas:\n- Web: ${portalUrl}\n- Correo: ${creds.email}\n- Contraseña: ${creds.password}\n\nTe recomendamos cambiar tu contraseña si lo deseas desde la opción "Recuperar clave".`
+      : "";
+    const credsWaDigits = creds ? cleanPhoneDigits(creds.phone) : "";
+    const credsWaHref = credsWaDigits.length >= 7
+      ? `https://wa.me/${credsWaDigits}?text=${encodeURIComponent(welcomeMsg)}`
+      : "";
 
     elRoot.innerHTML = `
       <section class="hero-banner" style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #0369a1 100%);">
         <div class="hero-top">
           <div>
             <div class="hero-badge">🛡️ Panel de Administración · Acceso Privado</div>
-            <h1>Gestión de Usuarios, Roles y Diplomas</h1>
-            <p>Crea alumnos, formadores o administradores sin abrir el registro público, consulta su avance en tiempo real y controla la validez pública de los certificados QR.</p>
+            <h1>Gestión de Usuarios, Solicitudes y Diplomas</h1>
+            <p>Crea alumnos, formadores o administradores, gestiona las solicitudes recibidas desde la landing page y controla la validez pública de los certificados QR.</p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn" id="adminRefreshBtn" style="background:#fff; color:#0f172a; border:none;">🔄 Actualizar lista</button>
+            <button class="btn" id="adminRefreshBtn" style="background:#fff; color:#0f172a; border:none;">🔄 Actualizar datos</button>
           </div>
         </div>
         <div class="kpi-grid">
@@ -3103,10 +3306,24 @@
           <div class="kpi-card"><div class="kpi-val">${st.students}</div><div class="kpi-lbl">Alumnos activos</div></div>
           <div class="kpi-card"><div class="kpi-val">${st.issuedCerts}</div><div class="kpi-lbl">Diplomas emitidos</div></div>
           <div class="kpi-card"><div class="kpi-val">${st.totalHours} h</div><div class="kpi-lbl">Horas de estudio en nube</div></div>
+          <div class="kpi-card clickable" id="kpiAdminLeadsCard" title="Ver solicitudes comerciales de la landing page">
+            <div class="kpi-val">${newLeadsCount} / ${totalLeadsCount}</div>
+            <div class="kpi-lbl">Solicitudes nuevas (Landing)</div>
+          </div>
         </div>
       </section>
 
-      ${adminState.error ? `
+      <div class="admin-subtabs" role="tablist" aria-label="Secciones de administración">
+        <button type="button" class="admin-subtab ${activeTab === "users" ? "active" : ""}" data-admin-tab="users">
+          👥 Usuarios y Diplomas (${st.totalUsers})
+        </button>
+        <button type="button" class="admin-subtab ${activeTab === "leads" ? "active" : ""}" data-admin-tab="leads">
+          📩 Solicitudes Landing (${totalLeadsCount})
+          ${newLeadsCount > 0 ? `<span class="lead-badge-new">${newLeadsCount} nueva${newLeadsCount === 1 ? "" : "s"}</span>` : ""}
+        </button>
+      </div>
+
+      ${adminState.error && activeTab === "users" ? `
         <div class="card" style="border-color:var(--gold-border); background:var(--gold-soft);">
           <h3 style="margin:0 0 6px; color:var(--gold);">⚠️ ${adminState.notDeployed ? "Falta desplegar la Edge Function admin-users en Supabase" : "Aviso del servidor de administración"}</h3>
           <p style="margin:0 0 8px; font-size:13.5px;">${esc(adminState.error)}</p>
@@ -3114,79 +3331,171 @@
         </div>
       ` : ""}
 
-      <div class="admin-grid">
-        <div class="card">
-          <h3 style="margin:0 0 6px;">➕ Crear nuevo usuario</h3>
-          <p style="margin:0 0 14px; font-size:12.8px; color:var(--text-soft);">El correo queda confirmado al instante y podrá entrar con estas credenciales.</p>
-          ${adminState.createError ? `<div class="auth-msg err">${esc(adminState.createError)}</div>` : ""}
-          <form id="adminCreateForm" class="admin-form-grid">
-            <div class="field-group">
-              <label for="admNewName">Nombre completo (para el diploma)</label>
-              <input class="input" id="admNewName" required placeholder="Ej.: Marta Gómez Serrano" />
-            </div>
-            <div class="field-group">
-              <label for="admNewEmail">Correo electrónico</label>
-              <input class="input" id="admNewEmail" type="email" required placeholder="marta.gomez@empresa.com" />
-            </div>
-            <div class="field-group">
-              <label for="admNewPass">Contraseña inicial (mín. 6 caracteres)</label>
-              <div style="display:flex; gap:6px;">
-                <input class="input" id="admNewPass" type="text" required minlength="6" value="${esc(generateStrongPassword(12))}" />
-                <button type="button" class="btn" id="admGenPassBtn" title="Generar nueva contraseña segura">🎲</button>
-              </div>
-            </div>
-            <div class="field-group">
-              <label for="admNewCompany">Empresa / Cargo (opcional)</label>
-              <input class="input" id="admNewCompany" placeholder="Ej.: Directora Comercial" />
-            </div>
-            <div class="field-group">
-              <label for="admNewRole">Rol asignado</label>
-              <select class="input" id="admNewRole">
-                <option value="student">🎓 Alumno (sin botones QA)</option>
-                <option value="trainer">👩‍🏫 Formador</option>
-                <option value="admin">🛡️ Administrador</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary" id="admCreateSubmitBtn" style="justify-content:center; padding:10px 14px; margin-top:4px;">✨ Crear cuenta ahora</button>
-          </form>
-
-          ${creds ? `
-            <div class="creds-copy-box">
-              <div style="font-weight:800; color:var(--success); margin-bottom:6px;">✅ Cuenta creada y lista para enviar</div>
-              <div><strong>Acceso:</strong> <code>${esc(portalUrl)}</code></div>
-              <div><strong>Correo:</strong> <code>${esc(creds.email)}</code></div>
-              <div><strong>Clave:</strong> <code>${esc(creds.password)}</code></div>
-              <button type="button" class="btn btn-success btn-xs" id="admCopyCredsBtn" style="margin-top:8px;">📋 Copiar mensaje de bienvenida</button>
-            </div>
-          ` : ""}
-        </div>
-
+      ${activeTab === "leads" ? `
+        ${adminState.leadsError ? `
+          <div class="card" style="border-color:var(--gold-border); background:var(--gold-soft); margin-bottom:14px;">
+            <h3 style="margin:0 0 6px; color:var(--gold);">⚠️ No se pudieron leer las solicitudes</h3>
+            <p style="margin:0 0 6px; font-size:13.5px;">${esc(adminState.leadsError)}</p>
+            <p style="margin:0; font-size:12.5px; color:var(--text-muted);">Asegúrate de haber ejecutado <code>supabase/leads-migration.sql</code> en el SQL Editor de Supabase y de que tu cuenta tenga rol <code>admin</code>.</p>
+          </div>
+        ` : ""}
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-            <h3 style="margin:0;">👥 Usuarios registrados (<span id="adminUsersCount">${filtered.length}</span>)</h3>
+            <h3 style="margin:0;">📩 Solicitudes recibidas desde academia.useservices.company (<span id="adminLeadsCount">${filteredLeads.length}</span>)</h3>
           </div>
           <div class="admin-toolbar">
-            <input class="input" id="adminSearchInput" style="flex:1; min-width:200px;" value="${esc(adminState.search)}" placeholder="Buscar por nombre, correo o empresa…" />
-            <select class="input" id="adminRoleFilter" style="width:auto; min-width:150px;">
-              <option value="all" ${adminState.roleFilter === "all" ? "selected" : ""}>Todos los roles</option>
-              <option value="student" ${adminState.roleFilter === "student" ? "selected" : ""}>🎓 Alumnos</option>
-              <option value="trainer" ${adminState.roleFilter === "trainer" ? "selected" : ""}>👩‍🏫 Formadores</option>
-              <option value="admin" ${adminState.roleFilter === "admin" ? "selected" : ""}>🛡️ Administradores</option>
+            <input class="input" id="adminLeadsSearchInput" style="flex:1; min-width:220px;" value="${esc(adminState.leadsSearch)}" placeholder="Buscar por nombre, correo, teléfono, empresa o programa…" />
+            <select class="input" id="adminLeadsStatusFilter" style="width:auto; min-width:170px;">
+              <option value="all" ${adminState.leadsStatusFilter === "all" ? "selected" : ""}>Todos los estados</option>
+              <option value="new" ${adminState.leadsStatusFilter === "new" ? "selected" : ""}>🆕 Nuevos</option>
+              <option value="contacted" ${adminState.leadsStatusFilter === "contacted" ? "selected" : ""}>📞 Contactados</option>
+              <option value="enrolled" ${adminState.leadsStatusFilter === "enrolled" ? "selected" : ""}>✅ Matriculados</option>
+              <option value="archived" ${adminState.leadsStatusFilter === "archived" ? "selected" : ""}>📦 Archivados</option>
             </select>
           </div>
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Progreso</th><th>Certificados QR</th><th>Último acceso</th><th>Acciones</th></tr>
+                <tr><th>Solicitante</th><th>Programa y plan</th><th>Mensaje</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
               </thead>
-              <tbody id="adminUsersTbody">${buildAdminTableRowsHtml(filtered)}</tbody>
+              <tbody id="adminLeadsTbody">${buildAdminLeadsRowsHtml(filteredLeads)}</tbody>
             </table>
           </div>
         </div>
-      </div>
+      ` : `
+        <div class="admin-grid">
+          <div class="card">
+            <h3 style="margin:0 0 6px;">➕ Crear nuevo usuario</h3>
+            <p style="margin:0 0 14px; font-size:12.8px; color:var(--text-soft);">El correo queda confirmado al instante y podrá entrar con estas credenciales.</p>
+            ${prefill ? `
+              <div class="auth-msg info" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span>📩 Creando acceso desde solicitud de <strong>${esc(prefill.name || prefill.email)}</strong> (${esc(LEAD_PROG_LABELS[prefill.program] || prefill.program)})</span>
+                <button type="button" class="btn btn-xs" id="admClearPrefillBtn">✕ Cancelar</button>
+              </div>
+            ` : ""}
+            ${adminState.createError ? `<div class="auth-msg err">${esc(adminState.createError)}</div>` : ""}
+            <form id="adminCreateForm" class="admin-form-grid">
+              <div class="field-group">
+                <label for="admNewName">Nombre completo (para el diploma)</label>
+                <input class="input" id="admNewName" required value="${esc(prefill?.name || "")}" placeholder="Ej.: Marta Gómez Serrano" />
+              </div>
+              <div class="field-group">
+                <label for="admNewEmail">Correo electrónico</label>
+                <input class="input" id="admNewEmail" type="email" required value="${esc(prefill?.email || "")}" placeholder="marta.gomez@empresa.com" />
+              </div>
+              <div class="field-group">
+                <label for="admNewPass">Contraseña inicial (mín. 6 caracteres)</label>
+                <div style="display:flex; gap:6px;">
+                  <input class="input" id="admNewPass" type="text" required minlength="6" value="${esc(generateStrongPassword(12))}" />
+                  <button type="button" class="btn" id="admGenPassBtn" title="Generar nueva contraseña segura">🎲</button>
+                </div>
+              </div>
+              <div class="field-group">
+                <label for="admNewCompany">Empresa / Cargo (opcional)</label>
+                <input class="input" id="admNewCompany" value="${esc(prefill?.company || "")}" placeholder="Ej.: Directora Comercial" />
+              </div>
+              <div class="field-group">
+                <label for="admNewRole">Rol asignado</label>
+                <select class="input" id="admNewRole">
+                  <option value="student">🎓 Alumno (sin botones QA)</option>
+                  <option value="trainer">👩‍🏫 Formador</option>
+                  <option value="admin">🛡️ Administrador</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary" id="admCreateSubmitBtn" style="justify-content:center; padding:10px 14px; margin-top:4px;">✨ Crear cuenta ahora</button>
+            </form>
+
+            ${creds ? `
+              <div class="creds-copy-box">
+                <div style="font-weight:800; color:var(--success); margin-bottom:6px;">✅ Cuenta creada y lista para enviar</div>
+                <div><strong>Acceso:</strong> <code>${esc(portalUrl)}</code></div>
+                <div><strong>Correo:</strong> <code>${esc(creds.email)}</code></div>
+                <div><strong>Clave:</strong> <code>${esc(creds.password)}</code></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                  <button type="button" class="btn btn-success btn-xs" id="admCopyCredsBtn">📋 Copiar mensaje de bienvenida</button>
+                  ${credsWaHref ? `<a class="btn btn-primary btn-xs" href="${esc(credsWaHref)}" target="_blank" rel="noopener">💬 Enviar acceso por WhatsApp</a>` : ""}
+                </div>
+              </div>
+            ` : ""}
+          </div>
+
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+              <h3 style="margin:0;">👥 Usuarios registrados (<span id="adminUsersCount">${filtered.length}</span>)</h3>
+            </div>
+            <div class="admin-toolbar">
+              <input class="input" id="adminSearchInput" style="flex:1; min-width:200px;" value="${esc(adminState.search)}" placeholder="Buscar por nombre, correo o empresa…" />
+              <select class="input" id="adminRoleFilter" style="width:auto; min-width:150px;">
+                <option value="all" ${adminState.roleFilter === "all" ? "selected" : ""}>Todos los roles</option>
+                <option value="student" ${adminState.roleFilter === "student" ? "selected" : ""}>🎓 Alumnos</option>
+                <option value="trainer" ${adminState.roleFilter === "trainer" ? "selected" : ""}>👩‍🏫 Formadores</option>
+                <option value="admin" ${adminState.roleFilter === "admin" ? "selected" : ""}>🛡️ Administradores</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Progreso</th><th>Certificados QR</th><th>Último acceso</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="adminUsersTbody">${buildAdminTableRowsHtml(filtered)}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `}
     `;
 
-    document.getElementById("adminRefreshBtn").onclick = loadAdminUsers;
+    document.getElementById("adminRefreshBtn").onclick = () => {
+      loadAdminUsers();
+      loadAdminLeads();
+    };
+    const kpiLeadsCard = document.getElementById("kpiAdminLeadsCard");
+    if (kpiLeadsCard) {
+      kpiLeadsCard.onclick = () => {
+        adminState.tab = "leads";
+        renderAdmin();
+        if (!adminState.leads.length && !adminState.leadsLoading) loadAdminLeads();
+      };
+    }
+    elRoot.querySelectorAll("[data-admin-tab]").forEach((btn) => {
+      btn.onclick = () => {
+        const nextTab = btn.getAttribute("data-admin-tab");
+        if (nextTab === adminState.tab) return;
+        adminState.tab = nextTab === "leads" ? "leads" : "users";
+        renderAdmin();
+        if (adminState.tab === "leads" && !adminState.leads.length && !adminState.leadsLoading) {
+          loadAdminLeads();
+        }
+      };
+    });
+
+    if (activeTab === "leads") {
+      const lSearchInp = document.getElementById("adminLeadsSearchInput");
+      const lStatusSel = document.getElementById("adminLeadsStatusFilter");
+      function refreshFilteredLeadsOnly() {
+        const list = getFilteredAdminLeads();
+        const tbody = document.getElementById("adminLeadsTbody");
+        const cnt = document.getElementById("adminLeadsCount");
+        if (cnt) cnt.textContent = String(list.length);
+        if (tbody) {
+          tbody.innerHTML = buildAdminLeadsRowsHtml(list);
+          wireAdminLeadsButtons();
+        }
+      }
+      if (lSearchInp) lSearchInp.oninput = (e) => { adminState.leadsSearch = e.target.value; refreshFilteredLeadsOnly(); };
+      if (lStatusSel) lStatusSel.onchange = (e) => { adminState.leadsStatusFilter = e.target.value; refreshFilteredLeadsOnly(); };
+      wireAdminLeadsButtons();
+      return;
+    }
+
+    const clearPrefillBtn = document.getElementById("admClearPrefillBtn");
+    if (clearPrefillBtn) {
+      clearPrefillBtn.onclick = () => {
+        adminState.prefillUser = null;
+        renderAdmin();
+      };
+    }
+
     document.getElementById("admGenPassBtn").onclick = () => {
       document.getElementById("admNewPass").value = generateStrongPassword(12);
     };
@@ -3194,8 +3503,7 @@
     const copyBtn = document.getElementById("admCopyCredsBtn");
     if (copyBtn && creds) {
       copyBtn.onclick = async () => {
-        const txt = `Hola ${creds.name},\n\nYa tienes activo tu acceso al Campus de Certificaciones Ejecutivas:\n- Web: ${portalUrl}\n- Correo: ${creds.email}\n- Contraseña: ${creds.password}\n\nTe recomendamos cambiar tu contraseña si lo deseas desde la opción "Recuperar clave".`;
-        try { await navigator.clipboard.writeText(txt); toast("Credenciales copiadas al portapapeles"); }
+        try { await navigator.clipboard.writeText(welcomeMsg); toast("Credenciales copiadas al portapapeles"); }
         catch { toast("Copiado: " + creds.email); }
       };
     }
@@ -3208,6 +3516,7 @@
       const company = document.getElementById("admNewCompany").value.trim();
       const role = document.getElementById("admNewRole").value;
       const subBtn = document.getElementById("admCreateSubmitBtn");
+      const fromLead = adminState.prefillUser;
       adminState.createError = "";
       subBtn.disabled = true;
 
@@ -3226,7 +3535,16 @@
         return;
       }
 
-      adminState.lastCreatedCreds = { name, email, password, role };
+      adminState.lastCreatedCreds = { name, email, password, role, phone: fromLead?.phone || "" };
+      adminState.prefillUser = null;
+      if (fromLead?.leadId && window.CampusCloud?.updateAdminLeadStatus) {
+        const stRes = await window.CampusCloud.updateAdminLeadStatus(fromLead.leadId, "enrolled");
+        if (stRes.ok) {
+          const localLead = (adminState.leads || []).find((x) => x.id === fromLead.leadId);
+          if (localLead) localLead.status = "enrolled";
+        }
+        loadAdminLeads();
+      }
       toast(`Usuario ${email} creado correctamente`);
       await loadAdminUsers();
     };
