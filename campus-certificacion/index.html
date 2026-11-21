@@ -53,6 +53,7 @@
         <button class="btn btn-primary" id="openAdminBtn" style="display:none;" title="Panel de administración: crear usuarios, asignar roles y supervisar diplomas">🛡️ Admin</button>
         <button class="btn btn-gold" id="openQaBtn" style="display:none;" title="Herramientas rápidas para probar exámenes y certificado (solo administrador)">🧪 Pruebas</button>
         <button class="btn" id="openProfileBtn" title="Editar datos del titular del certificado">👤 <span id="topStudentName">Alumno</span></button>
+        <button class="btn btn-danger" id="topLogoutBtn" style="display:none;" title="Cerrar sesión y volver a la pantalla de acceso">🚪 Salir</button>
         <button class="btn" id="themeBtn" title="Cambiar modo claro/oscuro">🌓</button>
       </div>
     </header>
@@ -89,9 +90,12 @@
       <label for="profSigner">Nombre y cargo del firmante</label>
       <input class="input" id="profSigner" placeholder="Dirección Académica · Programa Ejecutivo" />
     </div>
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
-      <button class="btn" id="closeProfileBtn">Cancelar</button>
-      <button class="btn btn-primary" id="saveProfileBtn">Guardar cambios</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:14px;">
+      <button class="btn btn-danger" id="profileSignOutBtn" style="display:none;">🚪 Cerrar sesión</button>
+      <div style="display:flex; gap:8px; margin-left:auto;">
+        <button class="btn" id="closeProfileBtn">Cancelar</button>
+        <button class="btn btn-primary" id="saveProfileBtn">Guardar cambios</button>
+      </div>
     </div>
   </div>
 </div>

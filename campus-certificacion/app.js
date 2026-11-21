@@ -293,6 +293,8 @@
   const elOpenAdminBtn = document.getElementById("openAdminBtn");
   const elOpenQaBtn = document.getElementById("openQaBtn");
   const elOpenProfileBtn = document.getElementById("openProfileBtn");
+  const elTopLogoutBtn = document.getElementById("topLogoutBtn");
+  const elProfileSignOutBtn = document.getElementById("profileSignOutBtn");
   const elTopCatalogBtn = document.getElementById("topCatalogBtn");
   const elToggleSidebarBtn = document.getElementById("toggleSidebarBtn");
   const elRoleSwitch = document.querySelector(".role-switch");
@@ -308,6 +310,7 @@
     if (elTopTimerPill) elTopTimerPill.style.display = (locked || inVerifyGuest) ? "none" : "";
     if (elRoleSwitch) elRoleSwitch.style.display = (locked || inVerifyGuest) ? "none" : "";
     if (elOpenProfileBtn) elOpenProfileBtn.style.display = (locked || inVerifyGuest) ? "none" : "";
+    if (elTopLogoutBtn) elTopLogoutBtn.style.display = (!locked && Boolean(cloudState.user)) ? "" : "none";
     if (elOpenQaBtn) elOpenQaBtn.style.display = admin ? "" : "none";
     if (elOpenAdminBtn) elOpenAdminBtn.style.display = (admin && cloudState.configured) ? "" : "none";
   }
@@ -1148,6 +1151,9 @@
     const adminBtnHtml = isAdmin() && cloudState.configured
       ? `<button class="nav-link ${ui.view === "admin" ? "active" : ""}" data-nav="admin"><span class="left"><span>🛡️</span><span>Administración</span></span></button>`
       : "";
+    const signOutBtnHtml = cloudState.user
+      ? `<div class="nav-divider">Cuenta</div><button class="nav-link" data-signout="1" style="color:var(--danger);"><span class="left"><span>🚪</span><span>Cerrar sesión</span></span></button>`
+      : "";
 
     if (ui.view === "catalog" || ui.view === "admin" || !window.PROGRAMS?.[ui.programId]) {
       markEl.textContent = "🏛️";
@@ -1179,9 +1185,11 @@
             </button>
           `;
         }).join("")}
+        ${signOutBtnHtml}
       `;
       elNav.querySelectorAll("[data-nav]").forEach((b) => (b.onclick = () => navigate(b.getAttribute("data-nav"))));
       elNav.querySelectorAll("[data-pick-prog]").forEach((b) => (b.onclick = () => selectProgram(b.getAttribute("data-pick-prog"), "dashboard")));
+      elNav.querySelectorAll("[data-signout]").forEach((b) => (b.onclick = performSignOut));
       return;
     }
 
@@ -1252,8 +1260,9 @@
       `;
     });
 
-    elNav.innerHTML = html;
+    elNav.innerHTML = html + signOutBtnHtml;
     elNav.querySelectorAll("[data-nav]").forEach((btn) => (btn.onclick = () => navigate(btn.getAttribute("data-nav"))));
+    elNav.querySelectorAll("[data-signout]").forEach((btn) => (btn.onclick = performSignOut));
     elNav.querySelectorAll("[data-toggle-b]").forEach((btn) => {
       btn.onclick = () => {
         const bid = btn.getAttribute("data-toggle-b");
@@ -3275,6 +3284,7 @@
     document.getElementById("profCompany").value = db.profile.company;
     document.getElementById("profOrg").value = db.profile.org;
     document.getElementById("profSigner").value = db.profile.signer;
+    if (elProfileSignOutBtn) elProfileSignOutBtn.style.display = cloudState.user ? "" : "none";
     profileModal.classList.add("open");
   }
   document.getElementById("openProfileBtn").onclick = openProfileModal;
@@ -3626,20 +3636,26 @@
     }
   };
 
-  document.getElementById("authSignOutBtn").onclick = async () => {
+  async function performSignOut() {
+    stopAudio(true);
     flushStudySession();
     saveDb();
-    await window.CampusCloud.signOut();
+    try { await window.CampusCloud?.signOut?.(); } catch {}
     cloudState.user = null;
     cloudState.syncStatus = "local";
     db = loadPersisted(null);
     ui.examDraft = {};
+    ui.view = "catalog";
+    [authModal, profileModal, qaModal, studyTimeModal, adminEditModal].forEach((m) => m?.classList.remove("open"));
     refreshAuthModalState();
-    closeAuthModal();
     render();
     updateTimerUI();
-    toast("Sesión cerrada · Modo local restaurado");
-  };
+    toast("Sesión cerrada");
+  }
+
+  document.getElementById("authSignOutBtn").onclick = performSignOut;
+  if (elTopLogoutBtn) elTopLogoutBtn.onclick = performSignOut;
+  if (elProfileSignOutBtn) elProfileSignOutBtn.onclick = performSignOut;
 
   document.getElementById("authSyncNowBtn").onclick = async () => {
     if (!cloudState.user) return;
