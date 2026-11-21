@@ -13,5 +13,6 @@ window.CAMPUS_SUPABASE_CONFIG = {
   url: "https://jeabjhqyjdxztjebmxjw.supabase.co",
   publishableKey: "sb_publishable_q5hDt-HLvbUgo01PkdwgOg_DGI5i6lg", // Clave pública (sb_publishable_... o anon)
   publicBaseUrl: "https://campus.useservices.company/", // URL pública usada en los códigos QR
+  adminFunctionName: "super-worker", // Nombre/slug real de la Edge Function en Supabase
   closedAccess: true // true = solo entran usuarios creados por el administrador (oculta registro público)
 };

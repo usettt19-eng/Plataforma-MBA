@@ -765,7 +765,8 @@
         return { ok: false, status: 401, error: "No hay sesión activa de administrador." };
       }
 
-      const endpoint = `${String(cfg.url).replace(/\/+$/, "")}/functions/v1/admin-users`;
+      const fnSlug = String(cfg.adminFunctionName || "admin-users").trim();
+      const endpoint = `${String(cfg.url).replace(/\/+$/, "")}/functions/v1/${fnSlug}`;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
