@@ -1,39 +1,101 @@
 (function () {
-  const PROGRAMS = window.PROGRAMS || {};
-  const ASSESS_MAP = {
-    dind: window.ASSESSMENTS_DIND || window.ASSESSMENTS_DATA,
-    gmba: window.ASSESSMENTS_GMBA,
-    pmp: window.ASSESSMENTS_PMP,
-    emba: window.ASSESSMENTS_EMBA
-  };
-  const PROGRAM_ORDER = ["dind", "gmba", "pmp", "emba"].filter((id) => PROGRAMS[id]);
+  window.PROGRAMS = window.PROGRAMS || {};
+  const CATALOG = window.PROGRAM_CATALOG || window.PROGRAMS || {};
+  const PROGRAM_ORDER = ["dind", "gmba", "pmp", "emba"].filter((id) => CATALOG[id] || window.PROGRAMS[id]);
   const STORAGE_KEY_V2 = "campus_multicert_state_v2";
+  const USER_STORAGE_PREFIX = "campus_multicert_user_v1_";
   const LEGACY_KEY_V1 = "campus_cert_dind_state_v1";
   const THEME_KEY = "campus_cert_dind_theme_v1";
+  const NEEDS_FULL_DATA = new Set(["dashboard", "topic", "workshop", "exam", "certificate", "portfolio"]);
+
+  function getMeta(pid = ui.programId) {
+    return window.PROGRAMS?.[pid] || CATALOG[pid] || null;
+  }
+
+  function getAssess(pid = ui.programId) {
+    if (pid === "dind") return window.ASSESSMENTS_DIND || window.ASSESSMENTS_DATA || null;
+    if (pid === "gmba") return window.ASSESSMENTS_GMBA || null;
+    if (pid === "pmp") return window.ASSESSMENTS_PMP || null;
+    if (pid === "emba") return window.ASSESSMENTS_EMBA || null;
+    return null;
+  }
+
+  function getBlockTopicIds(b) {
+    if (!b) return [];
+    if (Array.isArray(b.topics)) return b.topics.map((t) => t.id);
+    if (Array.isArray(b.topicIds)) return b.topicIds;
+    return [];
+  }
+
+  const loadedScripts = {};
+  function loadScriptOnce(src) {
+    if (!src) return Promise.resolve();
+    if (loadedScripts[src]) return loadedScripts[src];
+    loadedScripts[src] = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = false;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+      document.body.appendChild(s);
+    });
+    return loadedScripts[src];
+  }
+
+  const programLoadPromises = {};
+  function ensureProgramLoaded(pid) {
+    if (window.PROGRAMS?.[pid] && getAssess(pid)) {
+      return Promise.resolve(true);
+    }
+    if (programLoadPromises[pid]) return programLoadPromises[pid];
+    const meta = CATALOG[pid];
+    if (!meta) return Promise.resolve(false);
+    const jobs = [];
+    if (!window.PROGRAMS?.[pid] && meta.programScript) jobs.push(loadScriptOnce(meta.programScript));
+    if (!getAssess(pid) && meta.assessScript) jobs.push(loadScriptOnce(meta.assessScript));
+    programLoadPromises[pid] = Promise.all(jobs).then(() => {
+      delete flatCache[pid];
+      return Boolean(window.PROGRAMS?.[pid] && getAssess(pid));
+    }).catch((err) => {
+      delete programLoadPromises[pid];
+      throw err;
+    });
+    return programLoadPromises[pid];
+  }
 
   const flatCache = {};
   function getFlatTopics(pid) {
+    const p = window.PROGRAMS?.[pid];
+    if (!p) return [];
     if (!flatCache[pid]) {
-      const p = PROGRAMS[pid];
       const list = [];
-      if (p) {
-        p.blocks.forEach((b) => {
-          b.topics.forEach((t) => {
-            list.push({
-              ...t,
-              blockId: b.id,
-              blockCode: b.code,
-              blockName: b.name,
-              blockNum: b.num,
-              blockIcon: b.icon,
-              blockGradient: b.gradient
-            });
+      p.blocks.forEach((b) => {
+        (b.topics || []).forEach((t) => {
+          list.push({
+            ...t,
+            blockId: b.id,
+            blockCode: b.code,
+            blockName: b.name,
+            blockNum: b.num,
+            blockIcon: b.icon,
+            blockGradient: b.gradient
           });
         });
-      }
+      });
       flatCache[pid] = list;
     }
     return flatCache[pid];
+  }
+
+  function makeDefaultProfile() {
+    return {
+      name: "Alex Rivera Fernández",
+      email: "alex.rivera@pymedigital.es",
+      company: "Dirección Comercial y Transformación Digital",
+      org: "Escuela Ejecutiva de Dirección, Ventas e Innovación",
+      signer: "Dra. Elena Navarro · Dirección Académica",
+      role: "student"
+    };
   }
 
   function makeEmptyProgramState() {
@@ -43,6 +105,7 @@
       workshops: {},
       notes: {},
       studyTime: { totalSeconds: 0, byBlock: {}, byTopic: {}, byDay: {}, sessions: [] },
+      certId: null,
       certIssuedAt: null
     };
   }
@@ -50,36 +113,45 @@
   function normalizeProgramState(ps) {
     const base = makeEmptyProgramState();
     const out = Object.assign(base, ps || {});
-    if (!out.studyTime) out.studyTime = base.studyTime;
+    if (!Array.isArray(out.completedTopics)) out.completedTopics = [];
+    if (!out.exams) out.exams = {};
+    if (!out.workshops) out.workshops = {};
+    if (!out.notes) out.notes = {};
+    if (!out.studyTime) out.studyTime = { totalSeconds: 0, byBlock: {}, byTopic: {}, byDay: {}, sessions: [] };
     if (!out.studyTime.byBlock) out.studyTime.byBlock = {};
     if (!out.studyTime.byTopic) out.studyTime.byTopic = {};
     if (!out.studyTime.byDay) out.studyTime.byDay = {};
-    if (!out.studyTime.sessions) out.studyTime.sessions = [];
+    if (!Array.isArray(out.studyTime.sessions)) out.studyTime.sessions = [];
     return out;
   }
 
-  function loadPersisted() {
+  function normalizeDbShape(rawObj) {
+    const fresh = {
+      profile: Object.assign(makeDefaultProfile(), rawObj?.profile || {}),
+      programs: {}
+    };
+    PROGRAM_ORDER.forEach((pid) => {
+      fresh.programs[pid] = normalizeProgramState(rawObj?.programs?.[pid]);
+    });
+    return fresh;
+  }
+
+  function storageKeyForUser(userId) {
+    return userId ? `${USER_STORAGE_PREFIX}${userId}` : STORAGE_KEY_V2;
+  }
+
+  function loadPersisted(userId = null) {
+    const key = storageKeyForUser(userId);
     try {
-      const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
-      if (rawV2) {
-        const parsed = JSON.parse(rawV2);
-        parsed.programs = parsed.programs || {};
-        PROGRAM_ORDER.forEach((pid) => {
-          parsed.programs[pid] = normalizeProgramState(parsed.programs[pid]);
-        });
-        return parsed;
-      }
+      const raw = localStorage.getItem(key);
+      if (raw) return normalizeDbShape(JSON.parse(raw));
     } catch {}
 
-    // Migrate legacy v1 data into dind automatically
+    if (userId) return normalizeDbShape({});
+
+    // Migrate legacy v1 data into dind automatically for Guest mode
     let migratedDind = makeEmptyProgramState();
-    let migratedProfile = {
-      name: "Alex Rivera Fernández",
-      email: "alex.rivera@pymedigital.es",
-      company: "Dirección Comercial y Transformación Digital",
-      org: "Escuela Ejecutiva de Dirección, Ventas e Innovación",
-      signer: "Dra. Elena Navarro · Dirección Académica"
-    };
+    let migratedProfile = makeDefaultProfile();
     try {
       const rawV1 = localStorage.getItem(LEGACY_KEY_V1);
       if (rawV1) {
@@ -103,7 +175,30 @@
     return fresh;
   }
 
-  let db = loadPersisted();
+  function hasMeaningfulProgress(state) {
+    if (!state?.programs) return false;
+    return PROGRAM_ORDER.some((pid) => {
+      const p = state.programs[pid];
+      if (!p) return false;
+      return (
+        (p.completedTopics || []).length > 0 ||
+        Object.keys(p.exams || {}).length > 0 ||
+        Object.keys(p.workshops || {}).length > 0 ||
+        Object.values(p.notes || {}).some((v) => String(v || "").trim().length > 0) ||
+        (p.studyTime?.totalSeconds || 0) > 0
+      );
+    });
+  }
+
+  const cloudState = {
+    configured: false,
+    user: null,
+    syncStatus: "local",
+    lastError: "",
+    syncing: false
+  };
+
+  let db = loadPersisted(null);
 
   let ui = {
     programId: PROGRAM_ORDER[0] || "dind",
@@ -125,14 +220,26 @@
     verifyQuery: ""
   };
 
-  function P() { return PROGRAMS[ui.programId]; }
-  function A() { return ASSESS_MAP[ui.programId]; }
+  const verifyState = {
+    loading: false,
+    query: "",
+    record: null,
+    source: null,
+    error: ""
+  };
+
+  let navNonce = 0;
+
+  function P() { return getMeta(ui.programId); }
+  function A() { return getAssess(ui.programId); }
   function PDB(pid = ui.programId) {
     if (!db.programs[pid]) db.programs[pid] = makeEmptyProgramState();
     return db.programs[pid];
   }
   function saveDb() {
-    localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(db));
+    try {
+      localStorage.setItem(storageKeyForUser(cloudState.user?.id || null), JSON.stringify(db));
+    } catch {}
   }
 
   // Theme
@@ -155,6 +262,7 @@
   const elTopTimerValue = document.getElementById("topTimerValue");
   const elTopTimerState = document.getElementById("topTimerState");
   const elSidebarTimeLabel = document.getElementById("sidebarTimeLabel");
+  const elCloudAuthBtn = document.getElementById("cloudAuthBtn");
 
   function toast(msg) {
     elToast.textContent = msg;
@@ -182,8 +290,10 @@
     currentSessionProgramId: null,
     currentSessionLabel: "",
     currentSessionBlockId: null,
+    currentSessionTopicId: null,
     currentSessionSeconds: 0,
-    unsavedTicks: 0
+    unsavedTicks: 0,
+    cloudTicks: 0
   };
 
   function todayKey() { return new Date().toISOString().slice(0, 10); }
@@ -229,15 +339,29 @@
 
   function flushStudySession() {
     if (timerState.currentSessionSeconds >= 3 && timerState.currentSessionLabel && timerState.currentSessionProgramId) {
-      const pdb = PDB(timerState.currentSessionProgramId);
-      pdb.studyTime.sessions.unshift({
+      const pid = timerState.currentSessionProgramId;
+      const pdb = PDB(pid);
+      const sessObj = {
         date: new Date().toISOString(),
         blockId: timerState.currentSessionBlockId,
+        topicId: timerState.currentSessionTopicId || null,
         label: timerState.currentSessionLabel,
         seconds: timerState.currentSessionSeconds
-      });
+      };
+      pdb.studyTime.sessions.unshift(sessObj);
       if (pdb.studyTime.sessions.length > 40) pdb.studyTime.sessions.length = 40;
       saveDb();
+      if (cloudState.user && window.CampusCloud?.isConfigured()) {
+        window.CampusCloud.recordStudySession(pid, sessObj);
+        window.CampusCloud.syncStudyTime(pid, pdb.studyTime);
+        if (sessObj.topicId) {
+          window.CampusCloud.syncTopic(pid, sessObj.topicId, {
+            completed: (pdb.completedTopics || []).includes(sessObj.topicId),
+            notes: pdb.notes?.[sessObj.topicId] || "",
+            studySeconds: pdb.studyTime.byTopic[sessObj.topicId] || 0
+          });
+        }
+      }
     }
     timerState.currentSessionSeconds = 0;
   }
@@ -308,6 +432,7 @@
     timerState.currentSessionProgramId = ctx.programId;
     timerState.currentSessionLabel = ctx.label;
     timerState.currentSessionBlockId = ctx.blockId;
+    timerState.currentSessionTopicId = ctx.topicId || null;
 
     const isIdle = Date.now() - timerState.lastActivityAt > IDLE_LIMIT_MS;
     const isVisible = document.visibilityState === "visible";
@@ -323,9 +448,16 @@
       pdb.studyTime.byDay[tk] = (pdb.studyTime.byDay[tk] || 0) + 1;
       timerState.currentSessionSeconds += 1;
       timerState.unsavedTicks += 1;
+      timerState.cloudTicks += 1;
       if (timerState.unsavedTicks >= 5) {
         saveDb();
         timerState.unsavedTicks = 0;
+      }
+      if (timerState.cloudTicks >= 20) {
+        timerState.cloudTicks = 0;
+        if (cloudState.user && window.CampusCloud?.isConfigured()) {
+          window.CampusCloud.syncStudyTime(ctx.programId, pdb.studyTime);
+        }
       }
     }
     updateTimerUI();
@@ -559,42 +691,49 @@
   }
 
   // =====================================================
-  // STATS & CERTIFICATES (MULTI-PROGRAM)
+  // STATS & CERTIFICATES (MULTI-PROGRAM + REAL QR)
   // =====================================================
   function getStats(pid = ui.programId) {
-    const prog = PROGRAMS[pid];
+    const prog = getMeta(pid);
+    if (!prog) {
+      return { doneSet: new Set(), topicsDone: 0, examsPassed: 0, workshopsDone: 0, avgScore: 0, overallPct: 0, certUnlocked: false, totalBlocks: 0, totalTopics: 0 };
+    }
     const pdb = PDB(pid);
-    const flat = getFlatTopics(pid);
+    const blocks = prog.blocks || [];
+    const allTopicIds = blocks.flatMap(getBlockTopicIds);
+    const totalTopics = allTopicIds.length || prog.totalTopics || 0;
     const doneSet = new Set(pdb.completedTopics || []);
-    const topicsDone = flat.filter((t) => doneSet.has(t.id)).length;
-    const examsPassed = prog.blocks.filter((b) => pdb.exams[b.id]?.passed).length;
-    const workshopsDone = prog.blocks.filter((b) => pdb.workshops[b.id]?.completed).length;
+    const topicsDone = allTopicIds.filter((id) => doneSet.has(id)).length;
+    const examsPassed = blocks.filter((b) => pdb.exams[b.id]?.passed).length;
+    const workshopsDone = blocks.filter((b) => pdb.workshops[b.id]?.completed).length;
 
-    const passedScores = prog.blocks
+    const passedScores = blocks
       .map((b) => pdb.exams[b.id]?.bestScore)
       .filter((s) => typeof s === "number");
     const avgScore = passedScores.length
       ? Math.round(passedScores.reduce((a, c) => a + c, 0) / passedScores.length)
       : 0;
 
-    const pctTopics = flat.length ? topicsDone / flat.length : 0;
-    const pctExams = prog.blocks.length ? examsPassed / prog.blocks.length : 0;
-    const pctWorkshops = prog.blocks.length ? workshopsDone / prog.blocks.length : 0;
+    const pctTopics = totalTopics ? topicsDone / totalTopics : 0;
+    const pctExams = blocks.length ? examsPassed / blocks.length : 0;
+    const pctWorkshops = blocks.length ? workshopsDone / blocks.length : 0;
     const overallPct = Math.round((pctTopics * 0.4 + pctExams * 0.4 + pctWorkshops * 0.2) * 100);
 
-    const certUnlocked = examsPassed === prog.blocks.length && prog.blocks.length > 0;
+    const certUnlocked = examsPassed === blocks.length && blocks.length > 0;
     if (certUnlocked && !pdb.certIssuedAt) {
       pdb.certIssuedAt = new Date().toISOString();
+      if (!pdb.certId) pdb.certId = computeCertId(pid);
       saveDb();
     }
 
-    return { doneSet, topicsDone, examsPassed, workshopsDone, avgScore, overallPct, certUnlocked, totalBlocks: prog.blocks.length, totalTopics: flat.length };
+    return { doneSet, topicsDone, examsPassed, workshopsDone, avgScore, overallPct, certUnlocked, totalBlocks: blocks.length, totalTopics };
   }
 
-  function getCertId(pid = ui.programId) {
-    const prog = PROGRAMS[pid];
+  function computeCertId(pid = ui.programId) {
+    const prog = getMeta(pid);
     const prefix = prog?.certPrefix || "CERT-2026";
-    const seed = `${db.profile.name}|${db.profile.email}|${prefix}`;
+    const ownerSeed = cloudState.user?.id ? cloudState.user.id : `${db.profile.name}|${db.profile.email}`;
+    const seed = `${ownerSeed}|${prefix}`;
     let h = 2166136261;
     for (let i = 0; i < seed.length; i++) {
       h ^= seed.charCodeAt(i);
@@ -604,7 +743,54 @@
     return `${prefix}-${hex}`;
   }
 
-  function generateQrSvg(code) {
+  function getCertId(pid = ui.programId) {
+    const pdb = PDB(pid);
+    if (pdb.certId) return pdb.certId;
+    const id = computeCertId(pid);
+    if (getStats(pid).certUnlocked) {
+      pdb.certId = id;
+      saveDb();
+    }
+    return id;
+  }
+
+  function getPublicVerifyUrl(certId) {
+    const configuredBase = String(window.CAMPUS_SUPABASE_CONFIG?.publicBaseUrl || "").trim();
+    let base = configuredBase;
+    if (!base) {
+      if (typeof window !== "undefined" && /^https?:\/\//i.test(window.location.origin)) {
+        base = `${window.location.origin}${window.location.pathname}`;
+      } else {
+        base = "https://usettt19-eng.github.io/Plataforma-MBA/";
+      }
+    }
+    const cleanBase = base.split("?")[0].split("#")[0];
+    return `${cleanBase}?verify=${encodeURIComponent(certId)}`;
+  }
+
+  function generateQrSvg(certId) {
+    const verifyUrl = getPublicVerifyUrl(certId);
+    if (typeof window.qrcode === "function") {
+      try {
+        const qr = window.qrcode(0, "M");
+        qr.addData(verifyUrl);
+        qr.make();
+        const count = qr.getModuleCount();
+        const cell = 3;
+        const pad = 6;
+        const dim = count * cell + pad * 2;
+        let rects = "";
+        for (let r = 0; r < count; r++) {
+          for (let c = 0; c < count; c++) {
+            if (qr.isDark(r, c)) {
+              rects += `<rect x="${c * cell + pad}" y="${r * cell + pad}" width="${cell}" height="${cell}" fill="#0f172a"/>`;
+            }
+          }
+        }
+        return `<svg width="96" height="96" viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Código QR de verificación oficial" style="border:1px solid #cbd5e1; border-radius:6px; background:#fff; shape-rendering:crispEdges;">${rects}</svg>`;
+      } catch {}
+    }
+
     const size = 21;
     const grid = Array.from({ length: size }, () => Array(size).fill(false));
     function drawFinder(r0, c0) {
@@ -616,7 +802,7 @@
     }
     drawFinder(0, 0); drawFinder(0, size - 7); drawFinder(size - 7, 0);
     let hash = 5381;
-    for (let i = 0; i < code.length; i++) hash = ((hash << 5) + hash + code.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < certId.length; i++) hash = ((hash << 5) + hash + certId.charCodeAt(i)) >>> 0;
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
         if ((r < 8 && c < 8) || (r < 8 && c >= size - 8) || (r >= size - 8 && c < 8)) continue;
@@ -632,7 +818,47 @@
       }
     }
     const dim = size * cell + 8;
-    return `<svg width="88" height="88" viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #cbd5e1; border-radius:6px; background:#fff;">${rects}</svg>`;
+    return `<svg width="92" height="92" viewBox="0 0 ${dim} ${dim}" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #cbd5e1; border-radius:6px; background:#fff;">${rects}</svg>`;
+  }
+
+  function buildCertificatePayload(pid = ui.programId) {
+    const prog = getMeta(pid);
+    if (!prog) return null;
+    const stats = getStats(pid);
+    if (!stats.certUnlocked) return null;
+    const pdb = PDB(pid);
+    const certId = getCertId(pid);
+    const transcript = (prog.blocks || []).map((b) => ({
+      code: b.code,
+      name: b.name,
+      icon: b.icon,
+      hours: b.hours,
+      topicsCount: getBlockTopicIds(b).length,
+      studySeconds: pdb.studyTime.byBlock[b.id] || 0,
+      workshopDone: Boolean(pdb.workshops[b.id]?.completed),
+      score: pdb.exams[b.id]?.bestScore || 0,
+      passed: Boolean(pdb.exams[b.id]?.passed)
+    }));
+    return {
+      certId,
+      programId: pid,
+      holderName: db.profile.name,
+      programName: prog.programName,
+      orgName: db.profile.org,
+      signerName: db.profile.signer,
+      durationLabel: prog.durationLabel,
+      avgScore: stats.avgScore,
+      totalStudySeconds: pdb.studyTime.totalSeconds || 0,
+      transcript,
+      issuedAt: pdb.certIssuedAt || new Date().toISOString()
+    };
+  }
+
+  function syncCertificateIfUnlocked(pid = ui.programId) {
+    if (!cloudState.user || !window.CampusCloud?.isConfigured()) return Promise.resolve();
+    const payload = buildCertificatePayload(pid);
+    if (!payload) return Promise.resolve();
+    return window.CampusCloud.syncCertificate(payload);
   }
 
   // =====================================================
@@ -732,28 +958,69 @@
   }
 
   // =====================================================
-  // NAVIGATION
+  // NAVIGATION (WITH ON-DEMAND PROGRAM LAZY LOADING)
   // =====================================================
-  function selectProgram(pid, targetView = "dashboard") {
+  function showProgramLoadingCard(pid) {
+    const meta = getMeta(pid);
+    elCrumb.innerHTML = `<span style="cursor:pointer;" id="crumbCatalogLoading">🏛️ Programas</span> › <strong>${esc(meta?.shortName || pid)}</strong>`;
+    const link = document.getElementById("crumbCatalogLoading");
+    if (link) link.onclick = () => navigate("catalog");
+    renderSidebar();
+    elRoot.innerHTML = `
+      <div class="card loading-card">
+        <div class="spinner"></div>
+        <h3 style="margin:0;">Cargando programa: ${esc(meta?.programName || pid)}</h3>
+        <p style="margin:0; font-size:13.5px; color:var(--text-soft);">Descargando clases interactivas, talleres y exámenes bajo demanda…</p>
+      </div>
+    `;
+  }
+
+  async function selectProgram(pid, targetView = "dashboard") {
     stopAudio(true);
     flushStudySession();
+    const nonce = ++navNonce;
     ui.programId = pid;
     ui.blockId = "b01";
-    ui.topicId = getFlatTopics(pid)[0]?.id || "b01-t01";
+    ui.topicId = "b01-t01";
     ui.openBlocks = new Set(["b01"]);
     ui.slideIndex = 0;
     ui.angleTab = "defs";
     ui.deckFullscreen = false;
     ui.studentReadingMode = false;
     ui.view = targetView;
+
+    if (NEEDS_FULL_DATA.has(targetView) && (!window.PROGRAMS?.[pid] || !getAssess(pid))) {
+      showProgramLoadingCard(pid);
+      try {
+        await ensureProgramLoaded(pid);
+      } catch (err) {
+        if (nonce !== navNonce) return;
+        toast(err?.message || "No se pudo cargar el programa");
+        ui.view = "catalog";
+        render();
+        return;
+      }
+      if (nonce !== navNonce) return;
+    }
+
+    const flat = getFlatTopics(pid);
+    if (flat.length && !flat.some((x) => x.id === ui.topicId)) {
+      ui.topicId = flat[0].id;
+    }
+
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      window.CampusCloud.touchEnrollment(pid);
+    }
+
     render();
     updateTimerUI();
     elViewport.scrollTop = 0;
   }
 
-  function navigate(view, opts = {}) {
+  async function navigate(view, opts = {}) {
     stopAudio(true);
     flushStudySession();
+    const nonce = ++navNonce;
     if (opts.programId) ui.programId = opts.programId;
     ui.view = view;
     if (opts.blockId) {
@@ -762,11 +1029,6 @@
     }
     if (opts.topicId) {
       ui.topicId = opts.topicId;
-      const found = getFlatTopics(ui.programId).find((t) => t.id === opts.topicId);
-      if (found) {
-        ui.blockId = found.blockId;
-        ui.openBlocks.add(found.blockId);
-      }
       ui.topicTab = "all";
       ui.slideIndex = 0;
       ui.angleTab = "defs";
@@ -774,6 +1036,38 @@
       ui.studentReadingMode = false;
       ui.deckFullscreen = false;
     }
+
+    const pid = ui.programId;
+    if (NEEDS_FULL_DATA.has(view) && (!window.PROGRAMS?.[pid] || !getAssess(pid))) {
+      showProgramLoadingCard(pid);
+      try {
+        await ensureProgramLoaded(pid);
+      } catch (err) {
+        if (nonce !== navNonce) return;
+        toast(err?.message || "No se pudo cargar el programa");
+        ui.view = "catalog";
+        render();
+        return;
+      }
+      if (nonce !== navNonce) return;
+    }
+
+    if (opts.topicId) {
+      const found = getFlatTopics(ui.programId).find((t) => t.id === opts.topicId);
+      if (found) {
+        ui.blockId = found.blockId;
+        ui.openBlocks.add(found.blockId);
+      }
+    }
+
+    if (view === "verify") {
+      render();
+      updateTimerUI();
+      elViewport.scrollTop = 0;
+      runPublicVerify(ui.verifyQuery || "");
+      return;
+    }
+
     render();
     updateTimerUI();
     elViewport.scrollTop = 0;
@@ -788,27 +1082,27 @@
     const nameEl = document.getElementById("sidebarBrandName");
     const tagEl = document.getElementById("sidebarBrandTag");
 
-    if (ui.view === "catalog") {
+    if (ui.view === "catalog" || !window.PROGRAMS?.[ui.programId]) {
       markEl.textContent = "🏛️";
       nameEl.textContent = "Portal de Certificaciones";
-      const totalTopicsAll = PROGRAM_ORDER.reduce((a, id) => a + PROGRAMS[id].totalTopics, 0);
+      const totalTopicsAll = PROGRAM_ORDER.reduce((a, id) => a + (getMeta(id)?.totalTopics || 0), 0);
       tagEl.textContent = `${PROGRAM_ORDER.length} programas · ${totalTopicsAll} temas`;
       const certsDone = PROGRAM_ORDER.filter((id) => getStats(id).certUnlocked).length;
-      const pctAll = Math.round(PROGRAM_ORDER.reduce((a, id) => a + getStats(id).overallPct, 0) / PROGRAM_ORDER.length);
+      const pctAll = Math.round(PROGRAM_ORDER.reduce((a, id) => a + getStats(id).overallPct, 0) / Math.max(1, PROGRAM_ORDER.length));
       elProgTitle.textContent = `Avance global (${certsDone}/${PROGRAM_ORDER.length} certs)`;
       elProgLabel.textContent = `${pctAll}%`;
       elProgBar.style.width = `${pctAll}%`;
 
       elNav.innerHTML = `
-        <button class="nav-link active" data-nav="catalog">
+        <button class="nav-link ${ui.view === "catalog" ? "active" : ""}" data-nav="catalog">
           <span class="left"><span>🏛️</span><span>Elegir Programa</span></span>
         </button>
-        <button class="nav-link" data-nav="verify">
+        <button class="nav-link ${ui.view === "verify" ? "active" : ""}" data-nav="verify">
           <span class="left"><span>🔍</span><span>Verificar Credencial</span></span>
         </button>
         <div class="nav-divider">Certificados Disponibles</div>
         ${PROGRAM_ORDER.map((pid) => {
-          const pr = PROGRAMS[pid];
+          const pr = getMeta(pid);
           const st = getStats(pid);
           return `
             <button class="nav-link" data-pick-prog="${pid}">
@@ -909,8 +1203,8 @@
   // =====================================================
   function renderCatalog() {
     elCrumb.innerHTML = `<strong>🏛️ Portal de Certificaciones Ejecutivas Online</strong>`;
-    const totalTopics = PROGRAM_ORDER.reduce((a, id) => a + PROGRAMS[id].totalTopics, 0);
-    const totalHours = PROGRAM_ORDER.reduce((a, id) => a + PROGRAMS[id].totalHours, 0);
+    const totalTopics = PROGRAM_ORDER.reduce((a, id) => a + (getMeta(id)?.totalTopics || 0), 0);
+    const totalHours = PROGRAM_ORDER.reduce((a, id) => a + (getMeta(id)?.totalHours || 0), 0);
     const certsEarned = PROGRAM_ORDER.filter((id) => getStats(id).certUnlocked).length;
     const globalSec = getGlobalStudySeconds();
 
@@ -920,9 +1214,10 @@
           <div>
             <div class="hero-badge">🏛️ ${esc(db.profile.org)} · Plataforma Multi-Certificación</div>
             <h1>Elige tu Programa Certificado Online</h1>
-            <p>Hola, <strong>${esc(db.profile.name)}</strong>. Selecciona el certificado que deseas cursar o continuar. Ambos programas incluyen presentaciones interactivas por diapositivas, narrador de audio en español, acumulador inteligente de tiempo, calculadoras prácticas, exámenes y diploma verificable por QR.</p>
+            <p>Hola, <strong>${esc(db.profile.name)}</strong>. Selecciona el certificado que deseas cursar o continuar. Todos los programas incluyen presentaciones interactivas por diapositivas, narrador de audio en español, acumulador inteligente de tiempo, calculadoras prácticas, exámenes y diploma verificable por QR.</p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            ${!cloudState.user ? `<button class="btn btn-gold" id="catAuthBtn">☁️ Entrar / Guardar en la Nube</button>` : ""}
             <button class="btn" id="catVerifyBtn" style="background:#fff; color:#0f172a; border:none;">🔍 Verificar un Certificado</button>
           </div>
         </div>
@@ -942,7 +1237,7 @@
 
       <div class="catalog-grid">
         ${PROGRAM_ORDER.map((pid) => {
-          const pr = PROGRAMS[pid];
+          const pr = getMeta(pid);
           const st = getStats(pid);
           const pSec = PDB(pid).studyTime.totalSeconds || 0;
           return `
@@ -991,6 +1286,8 @@
       </div>
     `;
 
+    const catAuth = document.getElementById("catAuthBtn");
+    if (catAuth) catAuth.onclick = openAuthModal;
     document.getElementById("catVerifyBtn").onclick = () => navigate("verify");
     document.getElementById("catTimeKpi").onclick = openStudyTimeModal;
     elRoot.querySelectorAll("[data-enter-prog]").forEach((btn) => {
@@ -1195,10 +1492,18 @@
     if (mBtn) {
       mBtn.onclick = () => {
         const set = new Set(pdb.completedTopics);
-        if (set.has(t.id)) { set.delete(t.id); toast("Tema desmarcado"); }
-        else { set.add(t.id); toast("¡Clase marcada como completada!"); }
+        const nowDone = !set.has(t.id);
+        if (nowDone) { set.add(t.id); toast("¡Clase marcada como completada!"); }
+        else { set.delete(t.id); toast("Tema desmarcado"); }
         pdb.completedTopics = [...set];
         saveDb();
+        if (cloudState.user && window.CampusCloud?.isConfigured()) {
+          window.CampusCloud.syncTopic(ui.programId, t.id, {
+            completed: nowDone,
+            notes: pdb.notes?.[t.id] || "",
+            studySeconds: pdb.studyTime.byTopic[t.id] || 0
+          });
+        }
         render();
       };
     }
@@ -1523,8 +1828,16 @@
     const saveNote = document.getElementById("saveDeckNoteBtn");
     if (saveNote) {
       saveNote.onclick = () => {
-        pdb.notes[t.id] = document.getElementById("deckCaseNote").value;
+        const txt = document.getElementById("deckCaseNote").value;
+        pdb.notes[t.id] = txt;
         saveDb();
+        if (cloudState.user && window.CampusCloud?.isConfigured()) {
+          window.CampusCloud.syncTopic(ui.programId, t.id, {
+            completed: (pdb.completedTopics || []).includes(t.id),
+            notes: txt,
+            studySeconds: pdb.studyTime.byTopic[t.id] || 0
+          });
+        }
         toast("Respuesta guardada en tu portafolio");
       };
     }
@@ -1562,6 +1875,13 @@
         set.add(t.id);
         pdb.completedTopics = [...set];
         saveDb();
+        if (cloudState.user && window.CampusCloud?.isConfigured()) {
+          window.CampusCloud.syncTopic(ui.programId, t.id, {
+            completed: true,
+            notes: pdb.notes?.[t.id] || "",
+            studySeconds: pdb.studyTime.byTopic[t.id] || 0
+          });
+        }
         toast("¡Clase completada!");
         if (next) navigate("topic", { topicId: next.id });
         else navigate("certificate");
@@ -1960,6 +2280,9 @@
     document.getElementById("saveWsBtn").onclick = () => {
       pdb.workshops[b.id] = { completed: true, data: collectCalcData(), updatedAt: new Date().toISOString() };
       saveDb();
+      if (cloudState.user && window.CampusCloud?.isConfigured()) {
+        window.CampusCloud.syncWorkshop(ui.programId, b.id, pdb.workshops[b.id]);
+      }
       toast("¡Taller práctico guardado en tu portafolio!");
       render();
     };
@@ -2061,6 +2384,10 @@
         };
         draft.submitted = true;
         saveDb();
+        if (cloudState.user && window.CampusCloud?.isConfigured()) {
+          window.CampusCloud.syncExam(ui.programId, b.id, pdb.exams[b.id]);
+          syncCertificateIfUnlocked(ui.programId);
+        }
         toast(passed ? `¡Bloque ${b.num} aprobado con ${score}%!` : `Nota: ${score}%. Puedes reintentarlo`);
         render();
         elViewport.scrollTop = 0;
@@ -2109,14 +2436,21 @@
     }
 
     const certId = getCertId();
+    const verifyUrl = getPublicVerifyUrl(certId);
     const issuedDate = new Date(pdb.certIssuedAt || Date.now()).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
     const qrSvg = generateQrSvg(certId);
+
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      syncCertificateIfUnlocked(ui.programId);
+    }
 
     elRoot.innerHTML = `
       <div class="card no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
           <span class="pill success">✅ Certificado Oficial Emitido · ID ${certId}</span>
+          ${cloudState.user ? `<span class="pill" style="margin-left:6px;">☁️ Registrado para verificación QR</span>` : `<span class="pill gold" style="margin-left:6px;">💾 Solo local (entra en ☁️ para verificación pública online)</span>`}
           <p style="margin:6px 0 0; font-size:13px; color:var(--text-soft);">Imprime o guarda en PDF (A4 horizontal), personaliza institución/firmante o valida en el portal público.</p>
+          <div class="verify-url-box"><strong>URL pública verificable:</strong> <a href="${esc(verifyUrl)}" id="certDirectVerifyLink" style="color:var(--primary);">${esc(verifyUrl)}</a></div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-primary" id="printCertBtn">🖨️ Descargar / Imprimir PDF</button>
@@ -2167,7 +2501,7 @@
             <div class="qr-meta">
               <div><strong>Verificación online</strong></div>
               <div>Código: <code>${certId}</code></div>
-              <div>Escanea o consulta el portal oficial</div>
+              <div>Escanea con tu móvil o valida en web</div>
             </div>
             ${qrSvg}
           </div>
@@ -2177,65 +2511,194 @@
 
     document.getElementById("printCertBtn").onclick = () => window.print();
     document.getElementById("openVerifyBtn").onclick = () => { ui.verifyQuery = certId; navigate("verify"); };
+    const directVerify = document.getElementById("certDirectVerifyLink");
+    if (directVerify) {
+      directVerify.onclick = (e) => { e.preventDefault(); ui.verifyQuery = certId; navigate("verify"); };
+    }
     document.getElementById("editCertBrandBtn").onclick = openProfileModal;
     document.getElementById("copyLinkedInBtn").onclick = async () => {
-      const txt = `Certificación: ${prog.programName}\nEntidad emisora: ${db.profile.org}\nID de credencial: ${certId}\nCarga: ${prog.durationLabel} | Calificación media: ${stats.avgScore}%`;
-      try { await navigator.clipboard.writeText(txt); toast("Datos de credencial copiados para LinkedIn"); }
+      const txt = `Certificación: ${prog.programName}\nEntidad emisora: ${db.profile.org}\nID de credencial: ${certId}\nURL de verificación: ${verifyUrl}\nCarga: ${prog.durationLabel} | Calificación media: ${stats.avgScore}%`;
+      try { await navigator.clipboard.writeText(txt); toast("Datos y enlace copiados para LinkedIn"); }
       catch { toast("Copiado: " + certId); }
     };
   }
 
   // =====================================================
-  // VIEW 6: UNIFIED PUBLIC CREDENTIAL VERIFIER (ALL PROGRAMS)
+  // VIEW 6: UNIFIED PUBLIC CREDENTIAL VERIFIER (CLOUD + LOCAL)
   // =====================================================
+  function findLocalIssuedCerts() {
+    return PROGRAM_ORDER
+      .filter((pid) => getStats(pid).certUnlocked)
+      .map((pid) => {
+        const prog = getMeta(pid);
+        const pdb = PDB(pid);
+        const stats = getStats(pid);
+        return { pid, id: getCertId(pid), prog, stats, pdb };
+      });
+  }
+
+  function localCertToRecord(match) {
+    return {
+      cert_id: match.id,
+      program_id: match.pid,
+      holder_name: db.profile.name,
+      program_name: match.prog.programName,
+      org_name: db.profile.org,
+      signer_name: db.profile.signer,
+      duration_label: match.prog.durationLabel,
+      avg_score: match.stats.avgScore,
+      total_study_seconds: match.pdb.studyTime.totalSeconds || 0,
+      issued_at: match.pdb.certIssuedAt || new Date().toISOString(),
+      status: "valid",
+      transcript: (match.prog.blocks || []).map((b) => ({
+        code: b.code,
+        name: b.name,
+        icon: b.icon,
+        hours: b.hours,
+        topicsCount: getBlockTopicIds(b).length,
+        studySeconds: match.pdb.studyTime.byBlock[b.id] || 0,
+        workshopDone: Boolean(match.pdb.workshops[b.id]?.completed),
+        score: match.pdb.exams[b.id]?.bestScore || 0,
+        passed: Boolean(match.pdb.exams[b.id]?.passed)
+      }))
+    };
+  }
+
+  async function runPublicVerify(rawCode) {
+    const localIssued = findLocalIssuedCerts();
+    const query = String(rawCode || ui.verifyQuery || localIssued[0]?.id || "").trim().toUpperCase();
+    ui.verifyQuery = query;
+    verifyState.query = query;
+    verifyState.error = "";
+
+    if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+      try {
+        const url = new URL(window.location.href);
+        if (query) url.searchParams.set("verify", query);
+        else url.searchParams.delete("verify");
+        window.history.replaceState({}, "", url.toString());
+      } catch {}
+    }
+
+    if (!query) {
+      verifyState.loading = false;
+      verifyState.record = null;
+      verifyState.source = null;
+      if (ui.view === "verify") renderVerify();
+      return;
+    }
+
+    const localMatch = localIssued.find((c) => c.id.toUpperCase() === query);
+    if (window.CampusCloud?.isConfigured()) {
+      verifyState.loading = true;
+      verifyState.record = null;
+      verifyState.source = null;
+      if (ui.view === "verify") renderVerify();
+
+      const res = await window.CampusCloud.verifyCertificatePublic(query);
+      if (verifyState.query !== query) return;
+      verifyState.loading = false;
+
+      if (res.ok && res.data) {
+        verifyState.record = res.data;
+        verifyState.source = "cloud";
+      } else if (localMatch) {
+        verifyState.record = localCertToRecord(localMatch);
+        verifyState.source = "local";
+      } else {
+        verifyState.record = null;
+        verifyState.source = null;
+        if (res.error) verifyState.error = res.error;
+      }
+      if (ui.view === "verify") renderVerify();
+      return;
+    }
+
+    verifyState.loading = false;
+    if (localMatch) {
+      verifyState.record = localCertToRecord(localMatch);
+      verifyState.source = "local";
+    } else {
+      verifyState.record = null;
+      verifyState.source = null;
+    }
+    if (ui.view === "verify") renderVerify();
+  }
+
   function renderVerify() {
     elCrumb.innerHTML = `<strong>🔍 Portal Público de Verificación de Certificados</strong>`;
-    const issuedCerts = PROGRAM_ORDER
-      .filter((pid) => getStats(pid).certUnlocked)
-      .map((pid) => ({ pid, id: getCertId(pid), prog: PROGRAMS[pid], stats: getStats(pid), pdb: PDB(pid) }));
+    const issuedCerts = findLocalIssuedCerts();
+    const query = (verifyState.query || ui.verifyQuery || issuedCerts[0]?.id || "").trim().toUpperCase();
+    const rec = verifyState.record;
+    const isRevoked = rec && rec.status === "revoked";
+    const transcript = Array.isArray(rec?.transcript) ? rec.transcript : [];
 
-    const query = (ui.verifyQuery || issuedCerts[0]?.id || "").trim().toUpperCase();
-    const match = issuedCerts.find((c) => c.id === query);
+    let bodyHtml = "";
+    if (verifyState.loading) {
+      bodyHtml = `
+        <div class="card loading-card">
+          <div class="spinner"></div>
+          <h3 style="margin:0;">Consultando registro oficial…</h3>
+          <p style="margin:0; font-size:13.5px; color:var(--text-soft);">Verificando credencial <code>${esc(query)}</code> en Supabase.</p>
+        </div>
+      `;
+    } else if (query && rec) {
+      const issuedFormatted = rec.issued_at
+        ? new Date(rec.issued_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+        : "—";
+      bodyHtml = `
+        <div class="verify-banner" style="${isRevoked ? "border-color:var(--danger-border); background:var(--danger-soft);" : ""}">
+          <div style="font-size:38px;">${isRevoked ? "🚫" : "✅"}</div>
+          <div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+              <span class="pill ${isRevoked ? "danger" : "success"}">${isRevoked ? "Credencial Revocada" : "Credencial Verificada"}</span>
+              <span class="pill">${verifyState.source === "cloud" ? "☁️ Registro oficial en base de datos Supabase" : "💾 Validado desde sesión local"}</span>
+            </div>
+            <h2 style="margin:0 0 4px; color:${isRevoked ? "var(--danger)" : "var(--success)"};">${isRevoked ? "Certificado Revocado" : "Credencial Auténtica y Verificada"}</h2>
+            <p style="margin:0; font-size:13.5px;">
+              El certificado <strong>${esc(rec.cert_id)}</strong> (${esc(issuedFormatted)}) corresponde a <strong>${esc(rec.holder_name)}</strong> en el programa <strong>${esc(rec.program_name)}</strong> (${esc(rec.duration_label)}) emitido por <strong>${esc(rec.org_name)}</strong>.
+            </p>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 12px;">Expediente académico (${transcript.length} bloques · Nota media: ${rec.avg_score || 0}% · ⏱ ${formatShortDuration(rec.total_study_seconds || 0)})</h3>
+          ${transcript.length ? `
+            <div class="table-wrap"><table><thead><tr><th>Bloque</th><th>Temas</th><th>Horas</th><th>Tiempo estudiado</th><th>Taller práctico</th><th>Nota Examen</th><th>Estado</th></tr></thead><tbody>
+              ${transcript.map((row) => `<tr><td><strong>${row.icon || "📘"} ${esc(row.code)}:</strong> ${esc(row.name)}</td><td>${row.topicsCount || 0} temas</td><td>${row.hours || 0} h</td><td>${formatShortDuration(row.studySeconds || 0)}</td><td>${row.workshopDone ? "✅ Entregado" : "Pendiente"}</td><td><strong>${row.score || 0}%</strong></td><td><span class="pill ${row.passed ? "success" : "danger"}">${row.passed ? "Superado" : "Pendiente"}</span></td></tr>`).join("")}
+            </tbody></table></div>
+          ` : `<p style="margin:0; font-size:13px; color:var(--text-soft);">Certificado emitido y firmado por ${esc(rec.signer_name)}.</p>`}
+        </div>
+      `;
+    } else if (query) {
+      bodyHtml = `
+        <div class="card" style="border-color:var(--danger-border); background:var(--danger-soft);">
+          <h3 style="margin:0 0 6px; color:var(--danger);">❌ Certificado no encontrado o aún no emitido</h3>
+          <p style="margin:0; font-size:13.5px;">No existe registro emitido para <code>${esc(query)}</code>${verifyState.error ? ` (${esc(verifyState.error)})` : ""}. Completa los exámenes de un programa (o usa 🧪 Pruebas tras iniciar sesión en la nube) para generar una credencial verificable públicamente.</p>
+        </div>
+      `;
+    }
 
     elRoot.innerHTML = `
       <div class="card">
         <h1 style="margin:0 0 6px; font-size:23px;">🔍 Verificador Público de Credenciales</h1>
-        <p style="margin:0 0 14px; color:var(--text-soft); font-size:13.5px;">Valida en línea cualquier certificado emitido en cualquiera de los programas de <strong>${esc(db.profile.org)}</strong>.</p>
+        <p style="margin:0 0 14px; color:var(--text-soft); font-size:13.5px;">Valida en línea cualquier certificado emitido en cualquiera de los 4 programas de <strong>${esc(db.profile.org)}</strong>.</p>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input class="input" id="verifyInput" style="flex:1; min-width:240px;" value="${esc(query)}" placeholder="Ej.: CERT-DIND-2026-... o CERT-GMBA-2026-..." />
+          <input class="input" id="verifyInput" style="flex:1; min-width:240px;" value="${esc(query)}" placeholder="Ej.: CERT-DIND-2026-..., CERT-GMBA-2026-..., CERT-PMP-2026-... o CERT-EMBA-2026-..." />
           <button class="btn btn-primary" id="doVerifyBtn">Verificar código</button>
           ${issuedCerts.map((c) => `<button class="btn" data-fill-cid="${c.id}">Usar ${c.prog.icon} ${c.id}</button>`).join("")}
         </div>
       </div>
-
-      ${query ? (match ? `
-        <div class="verify-banner">
-          <div style="font-size:38px;">✅</div>
-          <div>
-            <h2 style="margin:0 0 3px; color:var(--success);">Credencial Auténtica y Verificada</h2>
-            <p style="margin:0; font-size:13.5px;">El certificado <strong>${match.id}</strong> es válido y acredita a <strong>${esc(db.profile.name)}</strong> en el programa <strong>${esc(match.prog.programName)}</strong> (${esc(match.prog.durationLabel)}).</p>
-          </div>
-        </div>
-        <div class="card">
-          <h3 style="margin:0 0 12px;">Expediente verificado (${match.prog.blocks.length} bloques · ⏱ ${formatShortDuration(match.pdb.studyTime.totalSeconds)} registradas)</h3>
-          <div class="table-wrap"><table><thead><tr><th>Bloque</th><th>Temas</th><th>Horas</th><th>Tiempo estudiado</th><th>Taller práctico</th><th>Nota Examen</th><th>Estado</th></tr></thead><tbody>
-            ${match.prog.blocks.map((b) => {
-              const ex = match.pdb.exams[b.id];
-              const ws = match.pdb.workshops[b.id];
-              return `<tr><td><strong>${b.icon} ${esc(b.code)}:</strong> ${esc(b.name)}</td><td>${b.topics.length} temas</td><td>${b.hours} h</td><td>${formatShortDuration(match.pdb.studyTime.byBlock[b.id] || 0)}</td><td>${ws?.completed ? "✅ Entregado" : "Pendiente"}</td><td><strong>${ex?.bestScore || 0}%</strong></td><td><span class="pill success">Superado</span></td></tr>`;
-            }).join("")}
-          </tbody></table></div>
-        </div>
-      ` : `
-        <div class="card" style="border-color:var(--danger-border); background:var(--danger-soft);">
-          <h3 style="margin:0 0 6px; color:var(--danger);">❌ Certificado no encontrado o aún no emitido</h3>
-          <p style="margin:0; font-size:13.5px;">No existe registro emitido para <code>${esc(query)}</code>. Completa los exámenes de un programa (o usa 🧪 Pruebas) para generar una credencial verificable.</p>
-        </div>
-      `) : ""}
+      ${bodyHtml}
     `;
 
-    document.getElementById("doVerifyBtn").onclick = () => { ui.verifyQuery = document.getElementById("verifyInput").value; render(); };
-    elRoot.querySelectorAll("[data-fill-cid]").forEach((btn) => (btn.onclick = () => { ui.verifyQuery = btn.getAttribute("data-fill-cid"); render(); }));
+    document.getElementById("doVerifyBtn").onclick = () => runPublicVerify(document.getElementById("verifyInput").value);
+    const inp = document.getElementById("verifyInput");
+    if (inp) {
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") runPublicVerify(inp.value);
+      });
+    }
+    elRoot.querySelectorAll("[data-fill-cid]").forEach((btn) => (btn.onclick = () => runPublicVerify(btn.getAttribute("data-fill-cid"))));
   }
 
   // =====================================================
@@ -2346,20 +2809,28 @@
       email: document.getElementById("profEmail").value.trim() || "alumno@ejemplo.es",
       company: document.getElementById("profCompany").value.trim(),
       org: document.getElementById("profOrg").value.trim() || "Escuela Ejecutiva de Dirección, Ventas e Innovación",
-      signer: document.getElementById("profSigner").value.trim() || "Dirección Académica"
+      signer: document.getElementById("profSigner").value.trim() || "Dirección Académica",
+      role: db.profile.role || "student"
     };
-    saveDb(); profileModal.classList.remove("open"); toast("Perfil actualizado"); render();
+    saveDb();
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      window.CampusCloud.syncProfile(db.profile);
+      PROGRAM_ORDER.forEach((pid) => syncCertificateIfUnlocked(pid));
+    }
+    profileModal.classList.remove("open");
+    toast("Perfil actualizado");
+    render();
   };
 
   // Study Time Breakdown Modal
   const studyTimeModal = document.getElementById("studyTimeModal");
   const togglePauseBtn = document.getElementById("togglePauseTimerBtn");
   function renderStudyTimeModal() {
-    const prog = P();
+    const prog = getMeta(ui.programId);
     const pdb = PDB();
     togglePauseBtn.textContent = timerState.manualPaused ? "▶ Reanudar contador" : "⏸ Pausar contador";
     const todaySec = pdb.studyTime.byDay[todayKey()] || 0;
-    const maxBlockSec = Math.max(60, ...prog.blocks.map((b) => pdb.studyTime.byBlock[b.id] || 0));
+    const maxBlockSec = Math.max(60, ...(prog?.blocks || []).map((b) => pdb.studyTime.byBlock[b.id] || 0));
     const sessions = pdb.studyTime.sessions || [];
 
     document.getElementById("studyTimeModalBody").innerHTML = `
@@ -2371,7 +2842,7 @@
       </div>
       <h4 style="margin:0 0 10px;">Tiempo por bloque (${esc(prog.shortName)})</h4>
       <div style="margin-bottom:18px;">
-        ${prog.blocks.map((b) => {
+        ${(prog?.blocks || []).map((b) => {
           const sec = pdb.studyTime.byBlock[b.id] || 0;
           const pct = Math.min(100, Math.round((sec / maxBlockSec) * 100));
           return `<div class="time-bar-row"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${b.icon} <strong>${esc(b.code)}</strong> · ${esc(b.name)}</span><div class="prog-track"><div class="prog-bar" style="width:${sec > 0 ? Math.max(4, pct) : 0}%"></div></div><strong style="text-align:right; font-variant-numeric:tabular-nums;">${formatShortDuration(sec)}</strong></div>`;
@@ -2395,16 +2866,20 @@
     toast(timerState.manualPaused ? "Cronómetro pausado" : "Cronómetro reanudado");
   };
 
-  // QA Modal (operates cleanly on active program!)
+  // QA Modal (operates cleanly on active program + syncs to cloud when signed in)
   const qaModal = document.getElementById("qaModal");
   document.getElementById("openQaBtn").onclick = () => {
-    if (ui.view === "catalog") { toast("Entra primero en uno de los 2 programas para simular su progreso"); return; }
+    if (ui.view === "catalog" || !window.PROGRAMS?.[ui.programId]) {
+      toast(`Entra primero en uno de los ${PROGRAM_ORDER.length} programas para simular su progreso`);
+      return;
+    }
     qaModal.classList.add("open");
   };
   document.getElementById("closeQaBtn").onclick = () => qaModal.classList.remove("open");
   qaModal.onclick = (e) => { if (e.target === qaModal) qaModal.classList.remove("open"); };
 
-  document.getElementById("qaSim1Btn").onclick = () => {
+  document.getElementById("qaSim1Btn").onclick = async () => {
+    await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB(); const b1 = prog.blocks[0];
     const set = new Set(pdb.completedTopics);
     b1.topics.forEach((t) => { set.add(t.id); pdb.studyTime.byTopic[t.id] = (pdb.studyTime.byTopic[t.id] || 0) + 1800; });
@@ -2413,10 +2888,15 @@
     pdb.completedTopics = [...set];
     pdb.exams.b01 = { bestScore: 80, lastScore: 80, passed: true, attempts: 1, date: new Date().toISOString() };
     pdb.workshops.b01 = { completed: true, data: { resumen: `Entregable completado del ${b1.code}` }, updatedAt: new Date().toISOString() };
-    saveDb(); qaModal.classList.remove("open"); toast(`Bloque 1 de ${prog.shortName} simulado (80 %)`); navigate("dashboard");
+    saveDb();
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      window.CampusCloud.syncProgramBatch(ui.programId, pdb, null);
+    }
+    qaModal.classList.remove("open"); toast(`Bloque 1 de ${prog.shortName} simulado (80 %)`); navigate("dashboard");
   };
 
-  document.getElementById("qaSim9Btn").onclick = () => {
+  document.getElementById("qaSim9Btn").onclick = async () => {
+    await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB();
     const lastBlock = prog.blocks[prog.blocks.length - 1];
     const set = new Set();
@@ -2431,14 +2911,20 @@
     pdb.studyTime.totalSeconds = Object.values(pdb.studyTime.byBlock).reduce((a, c) => a + c, 0);
     delete pdb.exams[lastBlock.id];
     pdb.certIssuedAt = null;
+    pdb.certId = null;
     pdb.completedTopics = [...set];
     ui.examDraft[`${ui.programId}:${lastBlock.id}`] = { answers: {}, submitted: false };
-    saveDb(); qaModal.classList.remove("open");
+    saveDb();
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      window.CampusCloud.syncProgramBatch(ui.programId, pdb, null);
+    }
+    qaModal.classList.remove("open");
     toast(`¡Aprueba el ${lastBlock.code} para emitir tu certificado!`);
     navigate("exam", { blockId: lastBlock.id });
   };
 
-  document.getElementById("qaUnlockAllBtn").onclick = () => {
+  document.getElementById("qaUnlockAllBtn").onclick = async () => {
+    await ensureProgramLoaded(ui.programId);
     const prog = P(); const pdb = PDB();
     pdb.completedTopics = getFlatTopics(ui.programId).map((t) => t.id);
     prog.blocks.forEach((b, i) => {
@@ -2451,7 +2937,13 @@
     });
     pdb.studyTime.totalSeconds = Object.values(pdb.studyTime.byBlock).reduce((a, c) => a + c, 0);
     pdb.certIssuedAt = new Date().toISOString();
-    saveDb(); qaModal.classList.remove("open");
+    pdb.certId = getCertId(ui.programId);
+    saveDb();
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      const payload = buildCertificatePayload(ui.programId);
+      window.CampusCloud.syncProgramBatch(ui.programId, pdb, payload);
+    }
+    qaModal.classList.remove("open");
     toast(`¡100 % completado en ${prog.shortName}! Diploma emitido`);
     navigate("certificate");
   };
@@ -2460,10 +2952,241 @@
     db.programs[ui.programId] = makeEmptyProgramState();
     ui.examDraft = {};
     timerState.currentSessionSeconds = 0;
-    saveDb(); qaModal.classList.remove("open");
+    saveDb();
+    if (cloudState.user && window.CampusCloud?.isConfigured()) {
+      window.CampusCloud.resetProgramCloud(ui.programId);
+    }
+    qaModal.classList.remove("open");
     toast("Progreso del programa actual reiniciado a 0 %");
     navigate("dashboard");
   };
+
+  // =====================================================
+  // CLOUD AUTHENTICATION & SUPABASE SYNC
+  // =====================================================
+  const authModal = document.getElementById("authModal");
+  const authForm = document.getElementById("authForm");
+  const authGuestPane = document.getElementById("authGuestPane");
+  const authLoggedInPane = document.getElementById("authLoggedInPane");
+  const authMsg = document.getElementById("authMsg");
+  const authMsgAuthed = document.getElementById("authMsgAuthed");
+  const authUnconfBanner = document.getElementById("authUnconfiguredBanner");
+  let authMode = "login";
+
+  function showAuthMsg(el, kind, text) {
+    if (!el) return;
+    if (!text) {
+      el.style.display = "none";
+      el.textContent = "";
+      el.className = "auth-msg";
+      return;
+    }
+    el.style.display = "block";
+    el.className = `auth-msg ${kind}`;
+    el.textContent = text;
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    document.querySelectorAll("[data-auth-tab]").forEach((b) => {
+      b.classList.toggle("active", b.getAttribute("data-auth-tab") === mode);
+    });
+    document.getElementById("authNameGroup").style.display = mode === "signup" ? "block" : "none";
+    const passGrp = document.getElementById("authPassGroup");
+    const passInp = document.getElementById("authPassword");
+    passGrp.style.display = mode === "reset" ? "none" : "block";
+    passInp.required = mode !== "reset";
+    passInp.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    document.getElementById("authSubmitBtn").textContent =
+      mode === "login" ? "Entrar en mi cuenta"
+      : mode === "signup" ? "Crear cuenta gratis"
+      : "Enviar enlace de recuperación";
+    showAuthMsg(authMsg, "", "");
+  }
+
+  function updateCloudTopbarUI() {
+    if (!elCloudAuthBtn) return;
+    elCloudAuthBtn.classList.remove("online", "saving", "error", "local");
+    if (!cloudState.configured) {
+      elCloudAuthBtn.classList.add("local");
+      elCloudAuthBtn.textContent = "💾 Modo local";
+    } else if (!cloudState.user) {
+      elCloudAuthBtn.classList.add("local");
+      elCloudAuthBtn.textContent = "🔐 Entrar / Nube";
+    } else if (cloudState.syncStatus === "saving" || cloudState.syncing) {
+      elCloudAuthBtn.classList.add("saving");
+      elCloudAuthBtn.textContent = "⏳ Guardando…";
+    } else if (cloudState.syncStatus === "error") {
+      elCloudAuthBtn.classList.add("error");
+      elCloudAuthBtn.textContent = "⚠️ Reintentar sync";
+    } else {
+      elCloudAuthBtn.classList.add("online");
+      elCloudAuthBtn.textContent = "☁️ Sincronizado";
+    }
+
+    const syncLabel = document.getElementById("authAccountSync");
+    if (syncLabel && cloudState.user) {
+      syncLabel.textContent = cloudState.syncStatus === "error"
+        ? `Aviso de sincronización: ${cloudState.lastError || "revisa tu conexión"}`
+        : cloudState.syncStatus === "saving"
+          ? "Guardando cambios en Supabase…"
+          : "Todo tu progreso y diplomas están sincronizados en la nube.";
+    }
+  }
+
+  function refreshAuthModalState() {
+    authUnconfBanner.style.display = cloudState.configured ? "none" : "block";
+    showAuthMsg(authMsg, "", "");
+    showAuthMsg(authMsgAuthed, "", "");
+
+    if (cloudState.user) {
+      authGuestPane.style.display = "none";
+      authLoggedInPane.style.display = "block";
+      document.getElementById("authAccountEmail").textContent = cloudState.user.email || db.profile.email;
+      const roleLabels = { student: "Alumno", trainer: "Formador", admin: "Administrador" };
+      document.getElementById("authAccountRole").textContent = roleLabels[db.profile.role] || "Alumno";
+    } else {
+      authGuestPane.style.display = "block";
+      authLoggedInPane.style.display = "none";
+      setAuthMode(authMode);
+    }
+    updateCloudTopbarUI();
+  }
+
+  function openAuthModal() {
+    refreshAuthModalState();
+    authModal.classList.add("open");
+  }
+
+  function closeAuthModal() {
+    authModal.classList.remove("open");
+  }
+
+  elCloudAuthBtn.onclick = openAuthModal;
+  document.getElementById("closeAuthXBtn").onclick = closeAuthModal;
+  document.getElementById("closeAuthGuestBtn").onclick = closeAuthModal;
+  document.getElementById("closeAuthAuthedBtn").onclick = closeAuthModal;
+  authModal.onclick = (e) => { if (e.target === authModal) closeAuthModal(); };
+  document.querySelectorAll("[data-auth-tab]").forEach((btn) => {
+    btn.onclick = () => setAuthMode(btn.getAttribute("data-auth-tab"));
+  });
+
+  authForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!cloudState.configured) {
+      showAuthMsg(authMsg, "err", "Pega primero tu clave pública en campus-certificacion/supabase-config.js.");
+      return;
+    }
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    const fullName = document.getElementById("authFullName").value.trim();
+    const submitBtn = document.getElementById("authSubmitBtn");
+    submitBtn.disabled = true;
+
+    try {
+      if (authMode === "login") {
+        const res = await window.CampusCloud.signIn({ email, password });
+        if (!res.ok) { showAuthMsg(authMsg, "err", res.error); return; }
+        await handleSignedIn(res.user);
+        closeAuthModal();
+      } else if (authMode === "signup") {
+        if (!fullName) { showAuthMsg(authMsg, "err", "Escribe tu nombre completo para los diplomas."); return; }
+        const res = await window.CampusCloud.signUp({ email, password, fullName });
+        if (!res.ok) { showAuthMsg(authMsg, "err", res.error); return; }
+        if (res.needsEmailConfirm) {
+          showAuthMsg(authMsg, "ok", "Cuenta creada. Revisa tu bandeja de correo y pulsa el enlace de confirmación antes de iniciar sesión.");
+          return;
+        }
+        await handleSignedIn(res.user);
+        closeAuthModal();
+      } else if (authMode === "reset") {
+        const res = await window.CampusCloud.resetPassword(email);
+        if (!res.ok) { showAuthMsg(authMsg, "err", res.error); return; }
+        showAuthMsg(authMsg, "ok", "Hemos enviado un correo con el enlace para restablecer tu contraseña.");
+      }
+    } finally {
+      submitBtn.disabled = false;
+    }
+  };
+
+  document.getElementById("authSignOutBtn").onclick = async () => {
+    flushStudySession();
+    saveDb();
+    await window.CampusCloud.signOut();
+    cloudState.user = null;
+    cloudState.syncStatus = "local";
+    db = loadPersisted(null);
+    ui.examDraft = {};
+    refreshAuthModalState();
+    closeAuthModal();
+    render();
+    updateTimerUI();
+    toast("Sesión cerrada · Modo local restaurado");
+  };
+
+  document.getElementById("authSyncNowBtn").onclick = async () => {
+    if (!cloudState.user) return;
+    await handleSignedIn(cloudState.user, { silent: false });
+    showAuthMsg(authMsgAuthed, "ok", "Sincronización completada correctamente.");
+  };
+
+  document.getElementById("authEditProfileBtn").onclick = () => {
+    closeAuthModal();
+    openProfileModal();
+  };
+
+  async function handleSignedIn(user, opts = {}) {
+    if (!user || cloudState.syncing) return;
+    cloudState.syncing = true;
+    cloudState.user = user;
+    cloudState.syncStatus = "saving";
+    updateCloudTopbarUI();
+
+    try {
+      const guestDb = loadPersisted(null);
+      const cachedUserDb = loadPersisted(user.id);
+      const cloudDb = await window.CampusCloud.loadUserState(PROGRAM_ORDER, makeDefaultProfile());
+
+      // Combine user offline cache + unmigrated Guest work without overwriting across accounts
+      const hasGuestWork = hasMeaningfulProgress(guestDb);
+      const baseLocal = hasGuestWork ? guestDb : cachedUserDb;
+      if (hasGuestWork && hasMeaningfulProgress(cachedUserDb)) {
+        const firstPass = await window.CampusCloud.mergeAndPushState(cachedUserDb, cloudDb, PROGRAM_ORDER, CATALOG);
+        const secondPass = await window.CampusCloud.mergeAndPushState(guestDb, firstPass.merged, PROGRAM_ORDER, CATALOG);
+        db = normalizeDbShape(secondPass.merged);
+      } else {
+        const mergedRes = await window.CampusCloud.mergeAndPushState(baseLocal, cloudDb, PROGRAM_ORDER, CATALOG);
+        db = normalizeDbShape(mergedRes.merged);
+      }
+
+      if (hasGuestWork) {
+        try { localStorage.removeItem(STORAGE_KEY_V2); } catch {}
+      }
+
+      saveDb();
+
+      // Ensure any unlocked certificate without a cloud record gets uploaded
+      for (const pid of PROGRAM_ORDER) {
+        if (getStats(pid).certUnlocked) {
+          await syncCertificateIfUnlocked(pid);
+        }
+      }
+
+      cloudState.syncStatus = "saved";
+      if (!opts.silent) toast("Sesión conectada con Supabase ☁️");
+    } catch (err) {
+      cloudState.syncStatus = "error";
+      cloudState.lastError = err?.message || "Error al cargar cuenta";
+      toast("No se pudo sincronizar completamente con Supabase");
+    } finally {
+      cloudState.syncing = false;
+      updateCloudTopbarUI();
+      if (authModal.classList.contains("open")) refreshAuthModalState();
+      if (ui.view === "verify" && verifyState.query) runPublicVerify(verifyState.query);
+      else render();
+      updateTimerUI();
+    }
+  }
 
   // Topbar controls
   document.getElementById("goCatalogBrand").onclick = () => navigate("catalog");
@@ -2494,6 +3217,55 @@
     }
   });
 
-  render();
-  updateTimerUI();
+  async function initApp() {
+    let urlVerifyCode = "";
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      urlVerifyCode = (sp.get("verify") || "").trim().toUpperCase();
+    } catch {}
+
+    if (urlVerifyCode) {
+      ui.view = "verify";
+      ui.verifyQuery = urlVerifyCode;
+    }
+
+    render();
+    updateTimerUI();
+
+    if (window.CampusCloud) {
+      const res = await window.CampusCloud.init(
+        (event, user) => {
+          if (event === "SIGNED_IN" && user && (!cloudState.user || cloudState.user.id !== user.id)) {
+            handleSignedIn(user, { silent: true });
+          } else if (event === "SIGNED_OUT") {
+            cloudState.user = null;
+            cloudState.syncStatus = "local";
+            db = loadPersisted(null);
+            updateCloudTopbarUI();
+            render();
+            updateTimerUI();
+          }
+        },
+        (status, detail) => {
+          cloudState.syncStatus = status;
+          cloudState.lastError = detail || "";
+          updateCloudTopbarUI();
+        }
+      );
+      cloudState.configured = Boolean(res?.configured);
+      if (res?.user) {
+        await handleSignedIn(res.user, { silent: true });
+      } else {
+        updateCloudTopbarUI();
+      }
+    } else {
+      updateCloudTopbarUI();
+    }
+
+    if (urlVerifyCode) {
+      await runPublicVerify(urlVerifyCode);
+    }
+  }
+
+  initApp();
 })();

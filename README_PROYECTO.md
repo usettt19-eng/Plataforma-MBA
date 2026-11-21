@@ -35,12 +35,17 @@ Project Management/
 ├── programa-mba-comercial/                          # Programa 2: Global MBA en Dirección Comercial y Ventas (70 temas)
 ├── programa-pmp/                                    # Programa 3: Preparación PMP y Dirección de Proyectos (27 temas)
 ├── programa-emba/                                   # Programa 4: Executive MBA (26 temas)
+├── supabase/
+│   └── schema.sql                                   # Esquema PostgreSQL + RLS + RPC pública verify_certificate
 │
 └── campus-certificacion/                            # Campus Web Interactivo Multi-Programa (4 certificados)
-    ├── index.html                                   # Portal multi-programa, barra superior, modales y pruebas QA
-    ├── styles.css                                   # Diseño claro/oscuro, presentaciones 3D y diploma A4 horizontal
-    ├── app.js                                       # Motor multi-programa: selector, slides, audio, tiempo, exámenes y QR
+    ├── index.html                                   # Portal multi-programa, barra superior, auth cloud, modales y QA
+    ├── styles.css                                   # Diseño claro/oscuro, presentaciones 3D, auth y diploma A4 horizontal
+    ├── supabase-config.js                           # URL y clave pública (publishable/anon) de Supabase
+    ├── supabase-client.js                           # Cliente Supabase Auth + sincronización cloud + verificación QR pública
+    ├── app.js                                       # Motor multi-programa: lazy-loading, slides, audio, tiempo, exámenes y QR
     └── data/
+        ├── catalog-meta.js                          # Catálogo ligero (~17 KB) para arranque instantáneo bajo demanda
         ├── program-dind.js                          # 57 temas + diapositivas compiladas (Programa 1)
         ├── program-gmba.js                          # 70 temas + diapositivas compiladas (Programa 2)
         ├── program-pmp.js                           # 27 temas + diapositivas compiladas (Programa 3)
@@ -111,10 +116,12 @@ Cada uno de los 180 temas sigue rigurosamente el **Prompt Maestro** con 10 secci
 
 ---
 
-## 6. Hoja de ruta para producción online (Full-Stack)
+## 6. Arquitectura Cloud con Supabase y Seguridad
 
-1. **Supabase Auth + PostgreSQL:** cuentas reales de alumnos, matrícula multi-programa, persistencia en nube de progreso, sesiones de tiempo, entregas y notas.
-2. **Verificación pública real (`/verificar/:certId`):** consulta en base de datos para empresas y credenciales de LinkedIn.
-3. **Panel de tutor / administración:** métricas por cohorte, revisión de talleres y emisión/revocación de diplomas.
-4. **Audio de estudio opcional (`.mp3`):** voces neuronales unificadas (Google Cloud TTS / ElevenLabs) servidas desde CDN.
-5. **Despliegue con dominio propio:** publicación del frontend en **Netlify** o **Vercel** con HTTPS.
+El campus combina **carga estática rápida + base de datos PostgreSQL multiusuario en Supabase**:
+
+1. **Carga bajo demanda (*lazy loading*):** [catalog-meta.js](campus-certificacion/data/catalog-meta.js) (~17 KB) carga instantáneamente el catálogo de los 4 programas en la portada; los módulos `program-*.js` y `assessments-*.js` se inyectan bajo demanda solo al entrar en cada programa.
+2. **Esquema PostgreSQL con RLS estricto ([supabase/schema.sql](supabase/schema.sql)):** 8 tablas (`profiles`, `enrollments`, `topic_progress`, `workshop_submissions`, `exam_attempts`, `program_study_time`, `study_sessions`, `certificates`) con `ENABLE ROW LEVEL SECURITY` y políticas basadas en `(select auth.uid()) = user_id`, además de triggers contra escalado de rol y manipulación de estado de revocación.
+3. **Verificación pública real por QR (`?verify=CERT-...`):** los códigos QR generados en los diplomas apuntan a la URL pública verificable y consultan la función RPC `public.verify_certificate(p_cert_id)` (`SECURITY DEFINER`, habilitada para `anon` y `authenticated` sin exponer la tabla completa de certificados ni correos privados).
+4. **Activación:** ejecutar [supabase/schema.sql](supabase/schema.sql) en Supabase SQL Editor y completar `publishableKey` en [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js).
+5. **Evolución futura opcional:** panel de tutor/administración por cohorte y audio `.mp3` neuronal pregenerado desde CDN.

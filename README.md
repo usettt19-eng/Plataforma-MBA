@@ -24,13 +24,14 @@ Reúne **4 programas completos (38 bloques · 180 temas · 720 horas de guías d
 
 ## Funcionalidades principales del Campus (`campus-certificacion/`)
 
-- **Página principal de selección de programas (`🏛️ Programas`):** progreso, talleres, notas, tiempo y diplomas aislados por programa.
+- **Página principal de selección de programas (`🏛️ Programas`):** progreso, talleres, notas, tiempo y diplomas aislados por programa, con **carga bajo demanda** (`data/catalog-meta.js` ~17 KB al inicio; cada `program-*.js` se descarga solo al abrirlo).
+- **Cuentas en la nube con Supabase (Auth + PostgreSQL + RLS):** registro e inicio de sesión por correo, migración no destructiva desde modo local/invitado y sincronización automática de temas, notas, talleres, exámenes, historial de estudio y diplomas (con respaldo offline en `localStorage` si navegas sin sesión).
 - **Presentaciones interactivas en Modo Alumno (`🎓`):** 8 diapositivas por tema (Portada + Objetivos Bloom, 4 Claves con pestañas de *Definiciones / Ejemplo Real / Errores / Autochequeo*, Caso Práctico interactivo, Flashcards 3D del glosario y Resumen Ejecutivo).
 - **Guía docente completa en Modo Formador (`👩‍🏫`):** las 10 secciones del diseño instruccional (secuencia de 240 min, actividades, rúbrica de 4 niveles, guion de diapositivas y adaptaciones) descargables en `.md`.
 - **Narrador de audio en español + Auto-clase (`🔊`):** lectura limpia de diapositivas (Web Speech API), control de velocidad (`0.85x`–`1.5x`), selección de voz y avance automático.
 - **Acumulador inteligente de tiempo de estudio (`⏱`):** conteo activo en clases, talleres y exámenes con pausa automática anti-inactividad (3 min o cambio de pestaña) e historial de sesiones.
 - **38 Talleres prácticos con calculadoras en tiempo real:** Matriz de Decisión Ponderada, Priorizador RICE + MVP, Unit Economics E-commerce, Embudo CRO, Calculadora SEM/ROAS, Simulador P&G/EBITDA, PERT + EMV de Riesgos, Valor Ganado (EVM), Elasticidad Precio–Demanda, Valoración DCF/WACC/VAN y Valoración M&A (EV/EBITDA).
-- **38 Exámenes autoevaluables (190 preguntas situacionales)**, **Diploma PDF A4 horizontal con código QR**, **Verificador Público Unificado** y **Portafolio `.md` exportable**.
+- **38 Exámenes autoevaluables (190 preguntas situacionales)**, **Diploma PDF A4 horizontal con código QR real (`?verify=CERT-...`)**, **Verificador Público conectado por RPC (`verify_certificate`)** y **Portafolio `.md` exportable**.
 
 ---
 
@@ -44,7 +45,15 @@ Abrir en el navegador: `http://localhost:8090` (o abrir directamente `campus-cer
 
 ---
 
-## Despliegue en servidor (ya preconfigurado)
+## Despliegue en servidor y activación de Supabase (3 pasos)
+
+El frontend ya incluye integración con **Supabase** ([supabase/schema.sql](supabase/schema.sql), [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js) y [campus-certificacion/supabase-client.js](campus-certificacion/supabase-client.js)). Para activar la base de datos en producción:
+
+1. **Crear las tablas y políticas RLS:** abre **SQL Editor** en tu proyecto Supabase y ejecuta el contenido completo de [supabase/schema.sql](supabase/schema.sql) (incluye 8 tablas con RLS estricto por usuario, triggers anti-escalado de rol y la función pública `verify_certificate` con `SECURITY DEFINER`).
+2. **Conectar tu clave pública:** en **Project Settings → API** de Supabase copia tu **Publishable key (`sb_publishable_...`)** (o `anon public`, *nunca* la clave `service_role` / `secret`) y pégala en `publishableKey` dentro de [campus-certificacion/supabase-config.js](campus-certificacion/supabase-config.js).
+3. **Configurar URLs de autenticación y publicar:** en **Authentication → URL Configuration** añade tu dominio de producción (por ejemplo `https://usettt19-eng.github.io/Plataforma-MBA/`) en **Site URL** y **Redirect URLs**.
+
+### Alojamiento estático preconfigurado
 
 - **GitHub Pages (gratis desde este repo):** en GitHub ve a **Settings → Pages → Source: GitHub Actions**. El workflow [deploy-pages.yml](.github/workflows/deploy-pages.yml) publicará `campus-certificacion/` automáticamente en `https://usettt19-eng.github.io/Plataforma-MBA/`.
 - **Netlify / Vercel:** importa este repositorio; ya incluye [netlify.toml](netlify.toml) y [vercel.json](vercel.json) apuntando a `campus-certificacion`.
@@ -54,9 +63,3 @@ Abrir en el navegador: `http://localhost:8090` (o abrir directamente `campus-cer
   docker run -d -p 80:80 --name plataforma-mba plataforma-mba
   ```
   *(Incluye compresión gzip y caché para `/data/` en [nginx.conf](nginx.conf) y [Dockerfile](Dockerfile)).*
-
----
-
-## Siguiente paso recomendado (Base de datos en producción)
-
-En esta fase demo el progreso del alumno se almacena localmente en `localStorage`. Para llevarlo a producción multiusuario con cuentas reales y verificación pública centralizada por QR, el siguiente paso es conectar **Supabase (Auth + PostgreSQL + RLS)** junto con carga bajo demanda (*lazy loading*) de los archivos `campus-certificacion/data/program-*.js` (detalles completos en [README_PROYECTO.md](README_PROYECTO.md)).
