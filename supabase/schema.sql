@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Plataforma-MBA · Esquema PostgreSQL + RLS + Verificación Pública de Diplomas
 -- Compatible con re-ejecución idempotente en Supabase SQL Editor.
--- Proyecto destino: https://jtivokxatefewtamlsxx.supabase.co
+-- Proyecto destino: https://jeabjhqyjdxztjebmxjw.supabase.co
 -- =============================================================================
 
 create extension if not exists pgcrypto;

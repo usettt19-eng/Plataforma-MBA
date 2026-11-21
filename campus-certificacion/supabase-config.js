@@ -10,7 +10,7 @@
 //     solo puede leer y modificar sus propios registros.
 // =============================================================================
 window.CAMPUS_SUPABASE_CONFIG = {
-  url: "https://jtivokxatefewtamlsxx.supabase.co",
-  publishableKey: "", // Pega aquí tu Publishable key (sb_publishable_...) o anon key
+  url: "https://jeabjhqyjdxztjebmxjw.supabase.co",
+  publishableKey: "sb_publishable_q5hDt-HLvbUgo01PkdwgOg_DGI5i6lg", // Pega aquí tu Publishable key (sb_publishable_...) o anon key
   publicBaseUrl: ""   // Opcional: ej. "https://usettt19-eng.github.io/Plataforma-MBA/"
 };
