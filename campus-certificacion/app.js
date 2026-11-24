@@ -7,6 +7,7 @@
   const LEGACY_KEY_V1 = "campus_cert_dind_state_v1";
   const THEME_KEY = "campus_cert_dind_theme_v1";
   const NEEDS_FULL_DATA = new Set(["dashboard", "topic", "workshop", "exam", "certificate", "portfolio"]);
+  const ASSET_VERSION = "20261124";
 
   function getMeta(pid = ui.programId) {
     return window.PROGRAMS?.[pid] || CATALOG[pid] || null;
@@ -129,7 +130,7 @@
     if (loadedScripts[src]) return loadedScripts[src];
     loadedScripts[src] = new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = src;
+      s.src = src.includes("?") ? `${src}&v=${ASSET_VERSION}` : `${src}?v=${ASSET_VERSION}`;
       s.async = false;
       s.onload = () => resolve();
       s.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
