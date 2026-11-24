@@ -257,6 +257,7 @@ html, body {
 .tab-btn:hover { background: var(--surface-2); color: var(--text); }
 .tab-btn.active { background: var(--primary-bright); color: #fff; }
 
+.md { min-width: 0; overflow-wrap: break-word; }
 .md h2 { font-size: 19px; margin: 0 0 12px; padding-bottom: 7px; border-bottom: 2px solid var(--primary-soft); }
 .md h3 { font-size: 16px; margin: 20px 0 8px; color: var(--primary); }
 .md h4 { font-size: 14.5px; margin: 14px 0 6px; }
@@ -267,10 +268,10 @@ html, body {
   margin: 12px 0; padding: 11px 15px; border-left: 4px solid var(--primary-bright);
   background: var(--primary-soft); border-radius: 0 8px 8px 0;
 }
-.md code { font-family: ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--surface-2); padding: 2px 5px; border-radius: 5px; }
+.md code { font-family: ui-monospace, Consolas, monospace; font-size: 0.88em; background: var(--surface-2); padding: 2px 5px; border-radius: 5px; overflow-wrap: anywhere; word-break: break-word; }
 .md pre { background: #0f172a; color: #e2e8f0; padding: 14px; border-radius: 10px; overflow-x: auto; font-size: 12.8px; }
-.md pre code { background: transparent; padding: 0; color: inherit; }
-.table-wrap { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--border); border-radius: 10px; }
+.md pre code { background: transparent; padding: 0; color: inherit; overflow-wrap: normal; word-break: normal; }
+.table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 16px; border: 1px solid var(--border); border-radius: 10px; }
 .md table { width: 100%; border-collapse: collapse; font-size: 13.2px; }
 .md th { background: var(--surface-2); text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); font-weight: 700; }
 .md td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -452,7 +453,7 @@ html, body {
 }
 .slide-goal-box strong { color: #fef08a; }
 
-.slide-body { padding: 28px 36px 32px; flex: 1; }
+.slide-body { padding: 28px 36px 32px; flex: 1; min-width: 0; max-width: 100%; }
 
 .obj-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;
@@ -574,11 +575,15 @@ html, body {
 
 /* Case Study 2-column Slide */
 .case-split {
-  display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start;
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start;
 }
 .case-panel {
   background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 14px; padding: 18px 20px;
+  border-radius: 14px; padding: 18px 20px; min-width: 0; max-width: 100%; overflow-wrap: break-word;
+}
+.case-panel-full { margin-top: 16px; }
+.def-card, .obj-card, .summary-tile, .example-spotlight, .mistake-card, .solution-reveal {
+  min-width: 0; overflow-wrap: break-word;
 }
 .solution-reveal {
   margin-top: 14px; background: var(--gold-soft); border: 1.5px solid var(--gold-border);
@@ -987,6 +992,7 @@ html, body {
   border-radius: 10px;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  max-width: 100%;
   overflow-x: auto;
   text-align: center;
 }
@@ -1014,6 +1020,7 @@ html, body {
 
 @media (max-width: 1080px) {
   .admin-grid { grid-template-columns: 1fr; }
+  .case-split { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {

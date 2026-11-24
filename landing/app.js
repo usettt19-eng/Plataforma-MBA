@@ -186,10 +186,10 @@
   renderSyllabus(activeSylProg);
 
   function jumpToForm(programVal, planVal) {
-    const selP = document.getElementById("leadProgram");
     const selPlan = document.getElementById("leadPlan");
-    if (selP && programVal) selP.value = programVal;
     if (selPlan && planVal) selPlan.value = planVal;
+    const pickedProg = programVal && programVal !== "all" ? programVal : null;
+    syncProgramPicker(selPlan ? selPlan.value : "allAccess", pickedProg, "", !pickedProg);
     document.getElementById("inscripcion").scrollIntoView({ behavior: "smooth" });
     setTimeout(() => { document.getElementById("leadName")?.focus(); }, 450);
   }
@@ -218,8 +218,8 @@
     const ok = net > 0;
     document.getElementById("demoEcomOut").innerHTML = `
       <div class="demo-out-grid">
-        <div><small>Beneficio neto por pedido</small><strong style="color:${ok ? "var(--success)" : "var(--danger)"};">${net.toFixed(2)} € (${pct.toFixed(1)} %)</strong></div>
-        <div><small>Impacto pasarela + devoluciones</small><strong>-${(payFee + retLoss).toFixed(2)} €</strong></div>
+        <div><small>Beneficio neto por pedido</small><strong style="color:${ok ? "var(--success)" : "var(--danger)"};">$${net.toFixed(2)} (${pct.toFixed(1)} %)</strong></div>
+        <div><small>Impacto pasarela + devoluciones</small><strong>-$${(payFee + retLoss).toFixed(2)}</strong></div>
         <div><small>Diagnóstico operativo</small><div style="margin-top:6px;"><span class="pill ${ok ? "success" : "danger"}">${ok ? "✅ 1.er pedido rentable" : "⚠️ Pierdes dinero sin recompra"}</span></div></div>
       </div>
     `;
@@ -236,7 +236,7 @@
       <div class="demo-out-grid">
         <div><small>CPI (Eficiencia de coste)</small><strong style="color:${cpi >= 1 ? "var(--success)" : "var(--danger)"};">${cpi.toFixed(2)}</strong></div>
         <div><small>SPI (Eficiencia de plazo)</small><strong style="color:${spi >= 1 ? "var(--success)" : "var(--danger)"};">${spi.toFixed(2)}</strong></div>
-        <div><small>Estimación al concluir (EAC)</small><strong>${Math.round(eac).toLocaleString("es-ES")} €</strong></div>
+        <div><small>Estimación al concluir (EAC)</small><strong>$${Math.round(eac).toLocaleString("en-US")}</strong></div>
         <div><small>Estado del proyecto</small><div style="margin-top:6px;"><span class="pill ${cpi >= 1 && spi >= 1 ? "success" : "danger"}">${cpi >= 1 && spi >= 1 ? "✅ En control" : "⚠️ Acción correctiva"}</span></div></div>
       </div>
     `;
@@ -261,41 +261,48 @@
     window.open(`${campusBase}/?verify=${encodeURIComponent(code)}`, "_blank", "noopener");
   };
 
-  // Pricing Cards
+  // Pricing Cards (4 package cards in USD) + Corporate B2B Horizontal Banner
   const plans = CFG.plans || {};
   const showPrices = CFG.showPrices !== false;
   const pricingDefs = [
     {
       key: "individual",
       featured: false,
-      defaultProg: "dind",
       features: [
         "✓ Acceso completo al programa que elijas",
         "✓ Clases visuales + narrador de audio en español",
-        "✓ Calculadoras ejecutivas y cuaderno personal",
+        "✓ Calculadoras ejecutivas o técnicas en vivo",
         "✓ Exámenes de bloque + diploma oficial con QR"
+      ]
+    },
+    {
+      key: "pack3",
+      featured: false,
+      features: [
+        "✓ Combina 3 programas completos a tu elección",
+        "✓ Simuladores en vivo incluidos en tus 3 áreas",
+        "✓ Hasta 3 diplomas independientes con QR",
+        "✓ Portafolio descargable .md y seguimiento nube"
+      ]
+    },
+    {
+      key: "pack4",
+      featured: false,
+      features: [
+        "✓ Combina 4 programas completos a tu elección",
+        "✓ Acceso simultáneo 24/7 desde cualquier equipo",
+        "✓ Hasta 4 diplomas independientes con QR",
+        showPrices ? "✓ Ahorra $1,110 USD frente a programas sueltos" : "✓ Máxima flexibilidad para combinar especialidades"
       ]
     },
     {
       key: "allAccess",
       featured: true,
-      defaultProg: "all",
       features: [
-        "✓ Los 5 programas completos (44 bloques · 230 temas · 920 h)",
-        "✓ Las 13 calculadoras ejecutivas/técnicas y 220 casos de examen",
-        "✓ Hasta 5 diplomas independientes verificables por QR + esquemas BIM",
-        "✓ Sincronización multi-dispositivo y portafolio .md"
-      ]
-    },
-    {
-      key: "corporate",
-      featured: false,
-      defaultProg: "all",
-      features: [
-        "✓ Desde 5 licencias nominales para tu equipo",
-        "✓ Alta centralizada de usuarios y facturación oficial",
-        "✓ Seguimiento de horas reales, notas y diplomas por empleado",
-        "✓ Soporte prioritario en implementación"
+        "✓ Los 5 programas (44 bloques · 230 temas · 920 h)",
+        "✓ Las 13 calculadoras y 220 casos de examen",
+        "✓ 5 diplomas independientes verificables por QR",
+        "✓ Incluye esquemas BIM/IA + portafolio .md"
       ]
     }
   ];
@@ -303,10 +310,11 @@
   document.getElementById("pricingGrid").innerHTML = pricingDefs.map((def) => {
     const p = plans[def.key] || {};
     const priceDisplay = showPrices ? (p.price || "Consultar") : "Consultar inversión";
+    const badgeText = showPrices ? (p.badge || "") : (def.featured ? "Más Elegido · Acceso Total" : "Plan Flexible");
     const ctaHref = p.ctaUrl ? `href="${esc(p.ctaUrl)}" target="_blank" rel="noopener"` : "";
     return `
       <article class="price-card ${def.featured ? "featured" : ""}">
-        <span class="price-badge">${esc(p.badge || "")}</span>
+        <span class="price-badge">${esc(badgeText)}</span>
         <h3>${esc(p.name || def.key)}</h3>
         <p class="price-sub">${esc(p.subtitle || "")}</p>
         <div class="price-val">${esc(priceDisplay)}</div>
@@ -314,15 +322,170 @@
         <ul class="price-list">${def.features.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
         ${p.ctaUrl
           ? `<a class="btn ${def.featured ? "btn-gold" : "btn-primary"}" ${ctaHref}>${esc(p.ctaLabel || "Contratar ahora →")}</a>`
-          : `<button type="button" class="btn ${def.featured ? "btn-gold" : "btn-primary"}" data-pick-plan="${def.key}" data-pick-prog="${def.defaultProg}">${esc(p.ctaLabel || "Solicitar acceso →")}</button>`
+          : `<button type="button" class="btn ${def.featured ? "btn-gold" : "btn-primary"}" data-pick-plan="${def.key}">${esc(p.ctaLabel || "Solicitar acceso →")}</button>`
         }
       </article>
     `;
   }).join("");
 
+  const corp = plans.corporate || {};
+  const corpBannerEl = document.getElementById("corporateBanner");
+  if (corpBannerEl) {
+    const corpPrice = showPrices ? (corp.price || "A medida") : "Consultar inversión";
+    const corpHref = corp.ctaUrl ? `href="${esc(corp.ctaUrl)}" target="_blank" rel="noopener"` : "";
+    corpBannerEl.innerHTML = `
+      <div class="corp-banner-info">
+        <span class="price-badge" style="display:inline-block; margin-bottom:10px;">${esc(corp.badge || "Para Empresas y Equipos")}</span>
+        <h3>${esc(corp.name || "Plan Corporativo B2B")}</h3>
+        <p>${esc(corp.subtitle || "Desde 5 licencias nominales para equipos con facturación oficial en USD y seguimiento de progreso.")}</p>
+        <div class="corp-banner-pills">
+          <span class="pill">✓ Desde 5 licencias nominales</span>
+          <span class="pill">✓ Facturación oficial en USD</span>
+          <span class="pill">✓ Seguimiento de horas y diplomas</span>
+          <span class="pill">✓ Alta centralizada</span>
+        </div>
+      </div>
+      <div class="corp-banner-cta">
+        <div class="price-val">${esc(corpPrice)}</div>
+        <div class="price-period">${esc(corp.period || "USD · facturación empresa · alta gestionada")}</div>
+        ${corp.ctaUrl
+          ? `<a class="btn btn-primary" ${corpHref}>${esc(corp.ctaLabel || "Solicitar propuesta empresa →")}</a>`
+          : `<button type="button" class="btn btn-primary" data-pick-plan="corporate">${esc(corp.ctaLabel || "Solicitar propuesta empresa →")}</button>`
+        }
+      </div>
+    `;
+  }
+
   document.querySelectorAll("[data-pick-plan]").forEach((btn) => {
-    btn.onclick = () => jumpToForm(btn.getAttribute("data-pick-prog"), btn.getAttribute("data-pick-plan"));
+    btn.onclick = () => jumpToForm(null, btn.getAttribute("data-pick-plan"));
   });
+
+  // Interactive Program Picker in Lead Form (1, 3, 4 or 5 programs)
+  const PLAN_LIMITS = { individual: 1, pack3: 3, pack4: 4, allAccess: 5, corporate: 5 };
+  const leadPlanEl = document.getElementById("leadPlan");
+  const pickerEl = document.getElementById("leadProgramPicker");
+  const pickerCountEl = document.getElementById("leadProgramCount");
+  const pickerHintEl = document.getElementById("leadProgramHint");
+  const programCheckboxes = [...document.querySelectorAll('input[name="leadPrograms"]')];
+
+  if (leadPlanEl && plans) {
+    leadPlanEl.querySelectorAll("option").forEach((opt) => {
+      const p = plans[opt.value];
+      if (!p) return;
+      if (opt.value === "corporate") {
+        opt.textContent = `${p.name || "Plan Corporativo B2B"} (Empresas)`;
+      } else if (showPrices && p.price && p.price !== "A medida") {
+        opt.textContent = `${p.name} — ${p.price} USD`;
+      } else {
+        opt.textContent = p.name;
+      }
+    });
+  }
+
+  function getSelectedPrograms() {
+    return programCheckboxes.filter((cb) => cb.checked).map((cb) => cb.value);
+  }
+
+  function refreshPickerUi(planVal, warnMsg = "") {
+    const limit = PLAN_LIMITS[planVal] ?? 5;
+    const isAll = planVal === "allAccess";
+    const isCorp = planVal === "corporate";
+    const selected = getSelectedPrograms();
+    programCheckboxes.forEach((cb) => {
+      cb.disabled = isAll;
+      const item = cb.closest(".prog-pick-item");
+      if (item) {
+        item.classList.toggle("checked", cb.checked);
+        item.classList.toggle("locked", isAll);
+      }
+    });
+    if (pickerCountEl) {
+      if (isAll) {
+        pickerCountEl.textContent = "✅ 5 / 5 incluidos";
+        pickerCountEl.className = "pill success";
+      } else if (isCorp) {
+        pickerCountEl.textContent = `${selected.length} / 5 programas`;
+        pickerCountEl.className = selected.length > 0 ? "pill success" : "pill";
+      } else {
+        pickerCountEl.textContent = selected.length === limit
+          ? `✅ ${selected.length} / ${limit} seleccionados`
+          : `${selected.length} / ${limit} seleccionados`;
+        pickerCountEl.className = selected.length === limit ? "pill success" : "pill";
+      }
+    }
+    if (pickerHintEl) {
+      if (warnMsg) {
+        pickerHintEl.textContent = warnMsg;
+        pickerHintEl.className = "prog-picker-hint warn";
+      } else if (isAll) {
+        pickerHintEl.textContent = "Incluye los 5 programas completos. Para elegir un subconjunto, cambia al paquete de 1, 3 o 4 programas.";
+        pickerHintEl.className = "prog-picker-hint";
+      } else if (isCorp) {
+        pickerHintEl.textContent = "Marca los programas que necesita tu equipo (de 1 a 5).";
+        pickerHintEl.className = "prog-picker-hint";
+      } else {
+        const falta = limit - selected.length;
+        pickerHintEl.textContent = falta > 0
+          ? `Marca ${falta === 1 ? "1 programa" : `exactamente ${falta} programas`} para completar tu paquete.`
+          : "✅ Selección completa para este paquete.";
+        pickerHintEl.className = "prog-picker-hint";
+      }
+    }
+  }
+
+  function syncProgramPicker(planVal, preselectProg = null, warnMsg = "", clearWhenAmbiguous = false) {
+    const limit = PLAN_LIMITS[planVal] ?? 5;
+    if (planVal === "allAccess") {
+      programCheckboxes.forEach((cb) => { cb.checked = true; });
+    } else if (preselectProg && ORDER.includes(preselectProg)) {
+      programCheckboxes.forEach((cb) => { cb.checked = cb.value === preselectProg; });
+    } else if (planVal === "corporate") {
+      const sel = getSelectedPrograms();
+      if (sel.length === 0 || clearWhenAmbiguous) {
+        programCheckboxes.forEach((cb) => { cb.checked = true; });
+      }
+    } else {
+      const sel = getSelectedPrograms();
+      if (clearWhenAmbiguous || sel.length > limit || sel.length === ORDER.length) {
+        programCheckboxes.forEach((cb) => { cb.checked = false; });
+      }
+    }
+    refreshPickerUi(planVal, warnMsg);
+  }
+
+  if (leadPlanEl) {
+    let prevPlan = leadPlanEl.value;
+    leadPlanEl.addEventListener("change", () => {
+      const nextPlan = leadPlanEl.value;
+      const resetSubset = prevPlan === "allAccess" && nextPlan !== "corporate" && nextPlan !== "allAccess";
+      prevPlan = nextPlan;
+      syncProgramPicker(nextPlan, null, "", resetSubset);
+    });
+  }
+
+  programCheckboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const planVal = leadPlanEl ? leadPlanEl.value : "allAccess";
+      const limit = PLAN_LIMITS[planVal] ?? 5;
+      let warn = "";
+      if (planVal === "individual") {
+        if (cb.checked) {
+          programCheckboxes.forEach((other) => { if (other !== cb) other.checked = false; });
+        }
+      } else if (planVal === "pack3" || planVal === "pack4") {
+        const checked = getSelectedPrograms();
+        if (checked.length > limit) {
+          cb.checked = false;
+          warn = `Tu paquete incluye ${limit} programas. Desmarca uno o selecciona un paquete superior.`;
+        }
+      }
+      refreshPickerUi(planVal, warn);
+    });
+  });
+
+  if (pickerEl) {
+    syncProgramPicker(leadPlanEl ? leadPlanEl.value : "allAccess");
+  }
 
   // FAQ Accordion
   document.querySelectorAll(".faq-q").forEach((btn) => {
@@ -355,13 +518,33 @@
 
   leadForm.onsubmit = async (e) => {
     e.preventDefault();
+    const planVal = leadPlanEl ? leadPlanEl.value : "allAccess";
+    const selectedProgs = getSelectedPrograms();
+    const limit = PLAN_LIMITS[planVal] ?? 5;
+
+    if (planVal !== "corporate" && selectedProgs.length !== limit) {
+      const msg = `Por favor, marca exactamente ${limit === 1 ? "1 programa" : `${limit} programas`} para el paquete seleccionado (llevas ${selectedProgs.length}).`;
+      showLeadMsg("err", `<strong>⚠️ Selección incompleta:</strong> ${esc(msg)}`);
+      refreshPickerUi(planVal, msg);
+      pickerEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (planVal === "corporate" && selectedProgs.length < 1) {
+      const msg = "Marca al menos 1 programa para tu equipo antes de enviar la solicitud.";
+      showLeadMsg("err", `<strong>⚠️ Selección incompleta:</strong> ${esc(msg)}`);
+      refreshPickerUi(planVal, msg);
+      pickerEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    const programInterest = selectedProgs.length === ORDER.length ? "all" : selectedProgs.join(",");
     const payload = {
       full_name: document.getElementById("leadName").value.trim(),
       email: document.getElementById("leadEmail").value.trim(),
       phone: document.getElementById("leadPhone").value.trim(),
       company: document.getElementById("leadCompany").value.trim(),
-      program_interest: document.getElementById("leadProgram").value,
-      plan_interest: document.getElementById("leadPlan").value,
+      program_interest: programInterest,
+      plan_interest: planVal,
       message: document.getElementById("leadMessage").value.trim(),
       source_url: window.location.href,
       utm_source: utm.source,
@@ -399,15 +582,22 @@
 
     leadBtn.disabled = false;
 
-    const waSummary = `Hola, soy ${payload.full_name} (${payload.email}). Estoy interesado/a en "${payload.program_interest}" (${payload.plan_interest}).`;
+    const planCfg = plans[planVal] || {};
+    const planLabel = (showPrices && planCfg.price && planCfg.price !== "A medida")
+      ? `${planCfg.name || planVal} (${planCfg.price} USD)`
+      : (planCfg.name || planVal);
+    const progNames = selectedProgs.map((id) => CATALOG[id]?.shortName || id).join(", ");
+    const waSummary = `Hola, soy ${payload.full_name} (${payload.email}). Estoy interesado/a en "${planLabel}" con: ${progNames}.`;
     const waHref = buildWaLink(waSummary);
     const mailHref = `mailto:${encodeURIComponent(contactEmail || "info@useservices.company")}?subject=${encodeURIComponent("Solicitud de plaza — Academia Ejecutiva")}&body=${encodeURIComponent(waSummary + (payload.message ? "\n\n" + payload.message : ""))}`;
 
     if (savedInSupabase) {
       leadForm.reset();
+      if (leadPlanEl) leadPlanEl.value = "allAccess";
+      syncProgramPicker("allAccess");
       showLeadMsg(
         "ok",
-        `<strong>✅ ¡Solicitud recibida!</strong> Hemos registrado tu interés para <strong>${esc(payload.full_name)}</strong>. Nos pondremos en contacto contigo muy pronto para activar tu acceso.` +
+        `<strong>✅ ¡Solicitud recibida!</strong> Hemos registrado tu interés para <strong>${esc(payload.full_name)}</strong> (${esc(planLabel)}). Nos pondremos en contacto contigo muy pronto para activar tu acceso.` +
         (waHref ? `<div style="margin-top:8px;"><a class="btn btn-primary" href="${esc(waHref)}" target="_blank" rel="noopener">💬 Acelerar atención por WhatsApp</a></div>` : "")
       );
     } else {

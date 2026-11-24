@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="styles.css?v=20261124" />
+  <link rel="stylesheet" href="styles.css?v=20261124b" />
 
   <!-- Structured Data: EducationalOrganization -->
   <script type="application/ld+json">
@@ -525,10 +525,10 @@
               <span class="pill">Incluido en DIND · Bloque 6</span>
             </div>
             <div class="demo-inputs-grid">
-              <label>Ticket medio sin IVA (€)<input type="number" id="deAov" value="72" step="1" /></label>
-              <label>Coste producto COGS (€)<input type="number" id="deCogs" value="27" step="0.5" /></label>
-              <label>CAC por pedido (€)<input type="number" id="deCac" value="15" step="0.5" /></label>
-              <label>Envío + Picking (€)<input type="number" id="deShip" value="9.5" step="0.5" /></label>
+              <label>Ticket medio sin impuestos ($)<input type="number" id="deAov" value="72" step="1" /></label>
+              <label>Coste producto COGS ($)<input type="number" id="deCogs" value="27" step="0.5" /></label>
+              <label>CAC por pedido ($)<input type="number" id="deCac" value="15" step="0.5" /></label>
+              <label>Envío + Picking ($)<input type="number" id="deShip" value="9.5" step="0.5" /></label>
               <label>Tasa devoluciones (%)<input type="number" id="deRet" value="12" step="1" /></label>
             </div>
             <div class="demo-output" id="demoEcomOut"></div>
@@ -543,10 +543,10 @@
               <span class="pill">Incluido en PMP · Bloque 8</span>
             </div>
             <div class="demo-inputs-grid">
-              <label>BAC — Presupuesto Total (€)<input type="number" id="dvBac" value="200000" step="5000" /></label>
-              <label>PV — Valor Planificado (€)<input type="number" id="dvPv" value="110000" step="5000" /></label>
-              <label>EV — Valor Ganado (€)<input type="number" id="dvEv" value="96000" step="5000" /></label>
-              <label>AC — Coste Real (€)<input type="number" id="dvAc" value="120000" step="5000" /></label>
+              <label>BAC — Presupuesto Total ($)<input type="number" id="dvBac" value="200000" step="5000" /></label>
+              <label>PV — Valor Planificado ($)<input type="number" id="dvPv" value="110000" step="5000" /></label>
+              <label>EV — Valor Ganado ($)<input type="number" id="dvEv" value="96000" step="5000" /></label>
+              <label>AC — Coste Real ($)<input type="number" id="dvAc" value="120000" step="5000" /></label>
             </div>
             <div class="demo-output" id="demoEvmOut"></div>
           </div>
@@ -623,11 +623,14 @@
         <div class="sec-head">
           <span class="sec-kicker">Planes e Inversión</span>
           <h2>Elige tu Modalidad de Acceso al Campus</h2>
-          <p>Alta rápida con credenciales privadas y acceso 24/7 desde cualquier ordenador, tablet o móvil.</p>
+          <p>Elige un paquete de 1, 3, 4 o 5 programas en dólares (USD), con alta privada y acceso 24/7 desde cualquier dispositivo.</p>
         </div>
 
         <div class="pricing-grid" id="pricingGrid">
           <!-- Rendered cleanly from landing-config.js -->
+        </div>
+        <div class="corp-banner" id="corporateBanner">
+          <!-- Corporate B2B horizontal banner rendered from landing-config.js -->
         </div>
       </div>
     </section>
@@ -643,7 +646,7 @@
           <article class="step-card">
             <div class="step-num">01</div>
             <h3>Solicitas tu plaza o modalidad</h3>
-            <p>Eliges un programa individual, el Pase All-Access con los 5 certificados o licencias para tu equipo y envías el formulario.</p>
+            <p>Eliges tu paquete de 1, 3, 4 o 5 programas certificados (o licencias para tu equipo), marcas qué programas deseas y envías el formulario.</p>
           </article>
           <article class="step-card">
             <div class="step-num">02</div>
@@ -697,8 +700,8 @@
             <div class="faq-a">Sí. Con el Plan Corporativo B2B habilitamos accesos individuales para cada integrante de tu equipo (desde 5 licencias), emitimos factura a nombre de tu sociedad y te facilitamos seguimiento de avance, exámenes y certificaciones.</div>
           </div>
           <div class="faq-item">
-            <button type="button" class="faq-q" aria-expanded="false">¿Puedo empezar con un programa y ampliar después a los 5? <span>▾</span></button>
-            <div class="faq-a">Sí. Todo tu historial, notas de casos prácticos, horas y diplomas quedan guardados en tu perfil único en Supabase; puedes ampliar al Pase All-Access cuando lo necesites conservando todo tu avance previo.</div>
+            <button type="button" class="faq-q" aria-expanded="false">¿Puedo empezar con 1 programa y ampliar después a un paquete de 3, 4 o 5? <span>▾</span></button>
+            <div class="faq-a">Sí. Todo tu historial, notas de casos prácticos, horas y diplomas quedan guardados en tu perfil único en Supabase; puedes ampliar a un paquete de 3, 4 o a los 5 programas (Pase All-Access) cuando lo necesites conservando todo tu avance previo.</div>
           </div>
           <div class="faq-item">
             <button type="button" class="faq-q" aria-expanded="false">¿Qué cubre y qué alcance tiene el programa de IA aplicada a instalaciones eléctricas? <span>▾</span></button>
@@ -751,7 +754,7 @@
             <div class="form-row-2">
               <div class="fg">
                 <label for="leadPhone">WhatsApp / Teléfono *</label>
-                <input id="leadPhone" type="tel" required placeholder="+34 600 000 000" autocomplete="tel" />
+                <input id="leadPhone" type="tel" required placeholder="+507 6000-0000" autocomplete="tel" />
               </div>
               <div class="fg">
                 <label for="leadCompany">Empresa / Cargo (opcional)</label>
@@ -759,25 +762,44 @@
               </div>
             </div>
 
-            <div class="form-row-2">
-              <div class="fg">
-                <label for="leadProgram">Programa de interés</label>
-                <select id="leadProgram">
-                  <option value="all">Pase All-Access (Los 5 Programas)</option>
-                  <option value="dind">Dirección, Innovación y Negocios Digitales (228 h)</option>
-                  <option value="gmba">Global MBA en Dirección Comercial y Ventas (90 ECTS)</option>
-                  <option value="pmp">Preparación PMP y Dirección de Proyectos (108 h)</option>
-                  <option value="emba">Executive MBA — Finanzas y Estrategia (19 Créditos)</option>
-                  <option value="iael">IA Aplicada a Instalaciones Eléctricas — BIM + IA (200 h)</option>
-                </select>
+            <div class="fg">
+              <label for="leadPlan">Paquete / Modalidad *</label>
+              <select id="leadPlan">
+                <option value="individual">Paquete 1 Programa — $490 USD</option>
+                <option value="pack3">Paquete 3 Programas — $750 USD</option>
+                <option value="pack4">Paquete 4 Programas — $850 USD</option>
+                <option value="allAccess" selected>Paquete 5 Programas (All-Access) — $950 USD</option>
+                <option value="corporate">Plan Corporativo B2B (Empresas)</option>
+              </select>
+            </div>
+
+            <div class="fg prog-picker" id="leadProgramPicker">
+              <div class="prog-picker-head">
+                <label style="margin:0;">Programas incluidos en tu paquete *</label>
+                <span class="pill" id="leadProgramCount">5 / 5 seleccionados</span>
               </div>
-              <div class="fg">
-                <label for="leadPlan">Modalidad preferida</label>
-                <select id="leadPlan">
-                  <option value="allAccess">Pase Ejecutivo All-Access</option>
-                  <option value="individual">1 Programa Certificado</option>
-                  <option value="corporate">Plan Corporativo B2B (Empresas)</option>
-                </select>
+              <p class="prog-picker-hint" id="leadProgramHint">Incluye los 5 programas completos.</p>
+              <div class="prog-picker-grid">
+                <label class="prog-pick-item">
+                  <input type="checkbox" name="leadPrograms" value="dind" checked />
+                  <span>🚀 Dirección, Innovación y Negocios Digitales (228 h)</span>
+                </label>
+                <label class="prog-pick-item">
+                  <input type="checkbox" name="leadPrograms" value="gmba" checked />
+                  <span>💼 Global MBA: Dirección Comercial y Ventas (90 ECTS)</span>
+                </label>
+                <label class="prog-pick-item">
+                  <input type="checkbox" name="leadPrograms" value="pmp" checked />
+                  <span>📐 Preparación PMP y Dirección de Proyectos (108 h)</span>
+                </label>
+                <label class="prog-pick-item">
+                  <input type="checkbox" name="leadPrograms" value="emba" checked />
+                  <span>🏛️ Executive MBA — Finanzas y Estrategia (19 créd.)</span>
+                </label>
+                <label class="prog-pick-item">
+                  <input type="checkbox" name="leadPrograms" value="iael" checked />
+                  <span>⚡ IA en Diseño Eléctrico BIM + IA (200 h)</span>
+                </label>
               </div>
             </div>
 
@@ -825,8 +847,8 @@
     💬 WhatsApp Admisiones
   </a>
 
-  <script src="landing-config.js?v=20261124"></script>
-  <script src="curriculum-data.js?v=20261124"></script>
-  <script src="app.js?v=20261124"></script>
+  <script src="landing-config.js?v=20261124b"></script>
+  <script src="curriculum-data.js?v=20261124b"></script>
+  <script src="app.js?v=20261124b"></script>
 </body>
 </html>

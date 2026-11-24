@@ -7,7 +7,7 @@
   const LEGACY_KEY_V1 = "campus_cert_dind_state_v1";
   const THEME_KEY = "campus_cert_dind_theme_v1";
   const NEEDS_FULL_DATA = new Set(["dashboard", "topic", "workshop", "exam", "certificate", "portfolio"]);
-  const ASSET_VERSION = "20261124";
+  const ASSET_VERSION = "20261124b";
 
   function getMeta(pid = ui.programId) {
     return window.PROGRAMS?.[pid] || CATALOG[pid] || null;
@@ -1103,12 +1103,15 @@
   }
 
   function renderLatexHtml(expr, displayMode = false) {
-    const cleanExpr = String(expr || "").replace(/\{,\}/g, ",").trim();
+    const cleanExpr = String(expr || "")
+      .replace(/\{,\}/g, ",")
+      .replace(/(\\[,;:! ])\s*\^/g, "$1{}^")
+      .trim();
     if (window.katex && typeof window.katex.renderToString === "function") {
       try {
         return window.katex.renderToString(cleanExpr, {
           displayMode: Boolean(displayMode),
-          throwOnError: false,
+          throwOnError: true,
           strict: false
         });
       } catch {}
@@ -1972,22 +1975,24 @@
             <div class="case-panel md">
               ${cs.context ? `<h3 style="margin-top:0;">🏢 Contexto</h3>${renderMd(cs.context)}` : ""}
               ${cs.problem ? `<h3>🚨 Situación / Problema</h3>${renderMd(cs.problem)}` : ""}
-              ${cs.data ? `<h3>📊 Datos clave</h3>${renderMd(cs.data)}` : ""}
               ${!cs.context && !cs.problem ? renderMd(cs.raw || "") : ""}
             </div>
             <div class="case-panel">
               ${cs.task ? `<div class="md"><h3 style="margin-top:0;">🎯 Tu Misión</h3>${renderMd(cs.task)}</div>` : ""}
-              ${(cs.questions || []).length ? `<h4 style="margin:12px 0 8px;">Preguntas clave para decidir:</h4><ul style="margin:0 0 14px; padding-left:18px; font-size:13.3px;">${cs.questions.map((q) => `<li style="margin-bottom:5px;">${inlineMd(q)}</li>`).join("")}</ul>` : ""}
-              <div class="field-group" style="margin-top:12px;">
-                <label for="deckCaseNote">✍️ Anota tu decisión (se guarda en tu portafolio)</label>
-                <textarea class="textarea" id="deckCaseNote" style="min-height:105px;" placeholder="¿Qué decidirías tú y por qué?">${esc(savedNote)}</textarea>
-              </div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-primary" id="saveDeckNoteBtn">💾 Guardar mi respuesta</button>
-                ${cs.solutions ? `<button class="btn btn-gold" id="revealSolBtn">${ui.solutionRevealed ? "🙈 Ocultar criterios del experto" : "👀 Revelar criterios del experto"}</button>` : ""}
-              </div>
-              ${ui.solutionRevealed && cs.solutions ? `<div class="solution-reveal md"><div style="font-size:12px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">💡 Criterios de solución del experto</div>${renderMd(cs.solutions)}</div>` : ""}
+              ${(cs.questions || []).length ? `<h4 style="margin:12px 0 8px;">Preguntas clave para decidir:</h4><ul style="margin:0 0 6px; padding-left:18px; font-size:13.3px;">${cs.questions.map((q) => `<li style="margin-bottom:5px;">${inlineMd(q)}</li>`).join("")}</ul>` : ""}
             </div>
+          </div>
+          ${cs.data ? `<div class="case-panel case-panel-full md"><h3 style="margin-top:0;">📊 Datos clave</h3>${renderMd(cs.data)}</div>` : ""}
+          <div class="case-panel case-panel-full">
+            <div class="field-group" style="margin-top:0;">
+              <label for="deckCaseNote">✍️ Anota tu decisión (se guarda en tu portafolio)</label>
+              <textarea class="textarea" id="deckCaseNote" style="min-height:105px;" placeholder="¿Qué decidirías tú y por qué?">${esc(savedNote)}</textarea>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn btn-primary" id="saveDeckNoteBtn">💾 Guardar mi respuesta</button>
+              ${cs.solutions ? `<button class="btn btn-gold" id="revealSolBtn">${ui.solutionRevealed ? "🙈 Ocultar criterios del experto" : "👀 Revelar criterios del experto"}</button>` : ""}
+            </div>
+            ${ui.solutionRevealed && cs.solutions ? `<div class="solution-reveal md"><div style="font-size:12px; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">💡 Criterios de solución del experto</div>${renderMd(cs.solutions)}</div>` : ""}
           </div>
         </div>
       `;
@@ -3454,10 +3459,24 @@
     iael: "⚡ IA en Diseño Eléctrico (200 h)"
   };
   const LEAD_PLAN_LABELS = {
-    allAccess: "Pase All-Access",
-    individual: "1 Programa",
+    individual: "Paquete 1 Programa",
+    pack3: "Paquete 3 Programas",
+    pack4: "Paquete 4 Programas",
+    allAccess: "Paquete 5 Programas (All-Access)",
     corporate: "Corporativo B2B"
   };
+
+  function formatLeadPrograms(raw) {
+    const val = String(raw || "").trim();
+    if (!val) return "—";
+    if (LEAD_PROG_LABELS[val]) return LEAD_PROG_LABELS[val];
+    return val
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((id) => LEAD_PROG_LABELS[id] || id)
+      .join(" · ");
+  }
 
   function cleanPhoneDigits(phone) {
     return String(phone || "").replace(/[^\d]/g, "");
@@ -3478,7 +3497,7 @@
   function buildLeadReplyWaHref(lead) {
     const digits = cleanPhoneDigits(lead?.phone);
     if (digits.length < 7) return "";
-    const progLabel = LEAD_PROG_LABELS[lead?.program_interest] || lead?.program_interest || "nuestros programas ejecutivos";
+    const progLabel = lead?.program_interest ? formatLeadPrograms(lead.program_interest) : "nuestros programas ejecutivos";
     const text = `Hola ${lead?.full_name || ""}, te saludamos de USE Services Business School respecto a tu solicitud de admisión para ${progLabel}. ¿Cómo podemos ayudarte a activar tu plaza?`;
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   }
@@ -3499,7 +3518,7 @@
     return rows.map((l) => {
       const st = ["new", "contacted", "enrolled", "archived"].includes(l.status) ? l.status : "new";
       const isAlreadyUser = existingEmails.has(String(l.email || "").trim().toLowerCase());
-      const progText = LEAD_PROG_LABELS[l.program_interest] || l.program_interest || "—";
+      const progText = formatLeadPrograms(l.program_interest);
       const planText = LEAD_PLAN_LABELS[l.plan_interest] || l.plan_interest || "—";
       const dateStr = l.created_at
         ? new Date(l.created_at).toLocaleString("es-ES", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -3720,7 +3739,7 @@
             <p style="margin:0 0 14px; font-size:12.8px; color:var(--text-soft);">El correo queda confirmado al instante y podrá entrar con estas credenciales.</p>
             ${prefill ? `
               <div class="auth-msg info" style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span>📩 Creando acceso desde solicitud de <strong>${esc(prefill.name || prefill.email)}</strong> (${esc(LEAD_PROG_LABELS[prefill.program] || prefill.program)})</span>
+                <span>📩 Creando acceso desde solicitud de <strong>${esc(prefill.name || prefill.email)}</strong> (${esc(formatLeadPrograms(prefill.program))})</span>
                 <button type="button" class="btn btn-xs" id="admClearPrefillBtn">✕ Cancelar</button>
               </div>
             ` : ""}

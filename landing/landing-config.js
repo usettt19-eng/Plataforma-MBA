@@ -15,34 +15,58 @@ window.LANDING_CONFIG = {
   whatsappNumber: "50760759851",
   contactEmail: "info@useservices.company",
 
+  currency: "USD",
   // true = muestra precios en tarjetas | false = muestra "Consultar inversión"
   showPrices: true,
   plans: {
     individual: {
-      badge: "Acceso Específico",
-      name: "1 Programa Certificado",
-      subtitle: "Elige entre DIND, Global MBA Comercial, Preparación PMP, Executive MBA o IA en Diseño Eléctrico (BIM).",
-      price: "490 €",
-      period: "pago único · acceso 12 meses",
-      ctaLabel: "Solicitar acceso a 1 programa",
+      count: 1,
+      badge: "Acceso Individual",
+      name: "Paquete 1 Programa",
+      subtitle: "Elige 1 programa entre DIND, Global MBA, PMP, Executive MBA o IA Eléctrica BIM.",
+      price: "$490",
+      period: "USD · pago único · acceso 12 meses",
+      ctaLabel: "Elegir 1 programa →",
       ctaUrl: "" // Opcional: enlace directo de Stripe / Hotmart / PayPal
     },
+    pack3: {
+      count: 3,
+      badge: "Ahorra $720 · $250 / prog.",
+      name: "Paquete 3 Programas",
+      subtitle: "Combina a tu medida 3 programas certificados del catálogo con acceso 24/7.",
+      price: "$750",
+      period: "USD · pago único · ahorras 49 %",
+      ctaLabel: "Elegir 3 programas →",
+      ctaUrl: ""
+    },
+    pack4: {
+      count: 4,
+      badge: "Ahorra $1,110 · $212 / prog.",
+      name: "Paquete 4 Programas",
+      subtitle: "Ruta ejecutiva y técnica avanzada eligiendo 4 programas por solo $100 más.",
+      price: "$850",
+      period: "USD · pago único · ahorras 57 %",
+      ctaLabel: "Elegir 4 programas →",
+      ctaUrl: ""
+    },
     allAccess: {
-      badge: "Más Elegido · Mejor Valor",
-      name: "Pase Ejecutivo All-Access",
-      subtitle: "Acceso completo a los 5 programas (44 bloques, 230 temas, 920 h y 5 diplomas QR).",
-      price: "890 €",
-      period: "pago único · acceso completo",
-      ctaLabel: "Solicitar Pase All-Access",
+      count: 5,
+      badge: "★ Mejor Valor · $190 / prog.",
+      name: "Paquete 5 Programas",
+      subtitle: "Pase All-Access completo: 44 bloques, 230 temas, 920 h y 5 diplomas QR.",
+      price: "$950",
+      period: "USD · pago único · ahorras $1,500",
+      ctaLabel: "Solicitar los 5 programas →",
       ctaUrl: ""
     },
     corporate: {
+      count: 0,
       badge: "Para Empresas y Equipos",
       name: "Plan Corporativo B2B",
-      subtitle: "Desde 5 licencias para formar mandos intermedios, ventas, PMO y dirección.",
+      subtitle: "Desde 5 licencias nominales para equipos directivos, comerciales, PMO o ingeniería BIM. Facturación oficial en USD y seguimiento de horas y diplomas.",
       price: "A medida",
-      period: "facturación empresa · alta gestionada",
-      ctaLabel: "Solicitar propuesta empresa",
+      period: "USD · facturación empresa · alta gestionada",
+      ctaLabel: "Solicitar propuesta empresa →",
       ctaUrl: ""
     }
   }
