@@ -980,6 +980,38 @@ html, body {
   background: #ffffff;
 }
 
+/* LaTeX / KaTeX Formula Styling & Offline Fallback */
+.math-block {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  text-align: center;
+}
+.katex {
+  font-size: 1.03em;
+  color: inherit;
+}
+.katex-display {
+  margin: 0.35em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.concept-chip .katex { font-size: 0.96em; }
+.math-fallback {
+  font-family: "Cambria Math", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  padding: 0 2px;
+}
+.math-fallback-block {
+  display: block;
+  font-size: 1.08em;
+  font-style: normal;
+  font-family: "Cambria Math", Georgia, "Times New Roman", serif;
+}
+
 @media (max-width: 1080px) {
   .admin-grid { grid-template-columns: 1fr; }
 }

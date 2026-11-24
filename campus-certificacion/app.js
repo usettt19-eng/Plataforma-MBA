@@ -660,9 +660,37 @@
     window.speechSynthesis.onvoiceschanged = loadSpanishVoices;
   }
 
+  function mathToSpeech(expr) {
+    let s = String(expr || "");
+    s = s.replace(/\{,\}/g, ",");
+    s = s.replace(/\\text\{([^}]*)\}/g, "$1").replace(/\\mathbf\{([^}]*)\}/g, "$1");
+    s = s.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "$1 entre $2");
+    s = s.replace(/\\sqrt\{([^}]*)\}/g, "raíz de $1");
+    s = s.replace(/\\cos\s*\\(?:varphi|phi)/g, "coseno de fi");
+    s = s.replace(/\\(?:sin|sen)\s*\\(?:varphi|phi)/g, "seno de fi");
+    s = s.replace(/\\(?:varphi|phi)\b/g, " fi ");
+    s = s.replace(/\\Phi\b/g, " flujo ").replace(/\\Omega\b/g, " ohmios ").replace(/\\Delta\b/g, " delta ");
+    s = s.replace(/\\rho\b/g, " ro ").replace(/\\sigma\b/g, " sigma ").replace(/\\mu\b/g, " micro ");
+    s = s.replace(/\\pi\b/g, " pi ").replace(/\\eta\b/g, " rendimiento ").replace(/\\theta\b/g, " theta ");
+    s = s.replace(/\\alpha\b/g, " alfa ").replace(/\\beta\b/g, " beta ").replace(/\\gamma\b/g, " gamma ");
+    s = s.replace(/\\lambda\b/g, " lambda ").replace(/\\tau\b/g, " tau ");
+    s = s.replace(/\\approx\b/g, " aproximadamente ").replace(/\\le\b/g, " menor o igual que ").replace(/\\ge\b/g, " mayor o igual que ");
+    s = s.replace(/\\(?:ne|neq)\b/g, " distinto de ").replace(/\\pm\b/g, " más menos ");
+    s = s.replace(/\\(?:times|cdot)\b/g, " por ").replace(/\\(?:Rightarrow|implies)\b/g, " implica ");
+    s = s.replace(/\\(?:rightarrow|to)\b/g, " a ").replace(/\\circ\b/g, " grados ");
+    s = s.replace(/\^\{?\s*2\s*\}?/g, " al cuadrado").replace(/\^\{?\s*3\s*\}?/g, " al cubo");
+    s = s.replace(/\^\{([^}]*)\}/g, " elevado a $1").replace(/\^([A-Za-z0-9-]+)/g, " elevado a $1");
+    s = s.replace(/_\{([^}]*)\}/g, " $1").replace(/_([A-Za-z0-9]+)/g, " $1");
+    s = s.replace(/\\(?:cos|sin|tan|arccos|ln|log|min|max)\b/g, (m) => " " + m.slice(1) + " ");
+    s = s.replace(/\\[a-zA-Z]+/g, " ").replace(/\\[% ,;]/g, " ");
+    return s.replace(/[{}$\\]/g, " ");
+  }
+
   function cleanForSpeech(mdText) {
-    return String(mdText || "")
-      .replace(/```[\s\S]*?```/g, " ")
+    let txt = String(mdText || "").replace(/```[\s\S]*?```/g, " ");
+    txt = txt.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => " " + mathToSpeech(m) + " ");
+    txt = txt.replace(/(?<!\\)\$(?!\$)(?!\s)((?:[^$\\\n]|\\.)+?)(?<!\s)\$(?!\d)/g, (_, m) => " " + mathToSpeech(m) + " ");
+    return txt
       .replace(/\|/g, ", ")
       .replace(/[#*_`>~]/g, "")
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
@@ -1037,13 +1065,114 @@
     return sections;
   }
 
+  function renderMathFallback(expr, displayMode) {
+    const clean = String(expr || "").replace(/\{,\}/g, ",").trim();
+    let s = esc(clean);
+    for (let pass = 0; pass < 3; pass++) {
+      s = s.replace(/\\text\{([^{}]*)\}/g, '<span style="font-style:normal;">$1</span>');
+      s = s.replace(/\\mathbf\{([^{}]*)\}/g, '<strong style="font-style:normal;">$1</strong>');
+    }
+    for (let pass = 0; pass < 3; pass++) {
+      s = s.replace(/\\sqrt\{([^{}]*)\}/g, "√($1)");
+      s = s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, "($1)/($2)");
+    }
+    const symMap = [
+      [/\\Omega\b/g, "Ω"], [/\\Delta\b/g, "Δ"], [/\\Phi\b/g, "Φ"],
+      [/\\(?:varphi|phi)\b/g, "φ"], [/\\rho\b/g, "ρ"], [/\\sigma\b/g, "σ"],
+      [/\\mu\b/g, "μ"], [/\\pi\b/g, "π"], [/\\eta\b/g, "η"], [/\\theta\b/g, "θ"],
+      [/\\alpha\b/g, "α"], [/\\beta\b/g, "β"], [/\\gamma\b/g, "γ"],
+      [/\\lambda\b/g, "λ"], [/\\tau\b/g, "τ"], [/\\times\b/g, "×"],
+      [/\\cdot\b/g, "·"], [/\\le\b/g, "≤"], [/\\ge\b/g, "≥"],
+      [/\\(?:ne|neq)\b/g, "≠"], [/\\approx\b/g, "≈"], [/\\pm\b/g, "±"],
+      [/\\circ\b/g, "°"], [/\\(?:Rightarrow|implies)\b/g, "⇒"],
+      [/\\(?:rightarrow|to)\b/g, "→"], [/\\leftrightarrow\b/g, "↔"],
+      [/\\ll\b/g, "≪"], [/\\gg\b/g, "≫"], [/\\sim\b/g, "∼"],
+      [/\\dots\b/g, "…"], [/\\varnothing\b/g, "∅"], [/\\in\b/g, "∈"],
+      [/\\sum\b/g, "∑"]
+    ];
+    symMap.forEach(([re, rep]) => { s = s.replace(re, rep); });
+    s = s.replace(/\\bar\{([^{}]*)\}/g, "$1\u0304").replace(/\\hat\{([^{}]*)\}/g, "$1\u0302");
+    s = s.replace(/\\max\b/g, '<span style="font-style:normal;">máx</span>').replace(/\\min\b/g, '<span style="font-style:normal;">mín</span>');
+    s = s.replace(/\\(cos|sin|tan|arccos|ln|log)\b/g, (_, fn) => `<span style="font-style:normal;">${fn === "sin" ? "sen" : fn}</span>`);
+    s = s.replace(/\\(?:left|right)\b/g, "").replace(/\\(?:qquad|quad|;|,| )/g, " ").replace(/\\%/g, "%");
+    s = s.replace(/\^\{([^{}]+)\}/g, "<sup>$1</sup>").replace(/\^([A-Za-z0-9+-])/g, "<sup>$1</sup>");
+    s = s.replace(/_\{([^{}]+)\}/g, "<sub>$1</sub>").replace(/_([A-Za-z0-9])/g, "<sub>$1</sub>");
+    s = s.replace(/[{}]/g, "");
+    return `<span class="math-fallback${displayMode ? " math-fallback-block" : ""}">${s}</span>`;
+  }
+
+  function renderLatexHtml(expr, displayMode = false) {
+    const cleanExpr = String(expr || "").replace(/\{,\}/g, ",").trim();
+    if (window.katex && typeof window.katex.renderToString === "function") {
+      try {
+        return window.katex.renderToString(cleanExpr, {
+          displayMode: Boolean(displayMode),
+          throwOnError: false,
+          strict: false
+        });
+      } catch {}
+    }
+    return renderMathFallback(cleanExpr, displayMode);
+  }
+
+  function truncateMdSafe(text, maxLen = 170) {
+    const raw = String(text || "");
+    if (raw.length <= maxLen) return raw;
+    let cut = maxLen;
+    const slice = raw.slice(0, cut);
+    const mathMatches = slice.match(/(?<!\\)\$/g) || [];
+    if (mathMatches.length % 2 === 1) {
+      const nextDollar = raw.indexOf("$", cut);
+      if (nextDollar !== -1 && nextDollar - cut <= 45) {
+        cut = nextDollar + 1;
+      } else {
+        const lastDollar = slice.lastIndexOf("$");
+        if (lastDollar > 20) cut = lastDollar;
+      }
+    }
+    const prefix = raw.slice(0, cut);
+    if ((prefix.match(/\*\*/g) || []).length % 2 === 1) {
+      const nextBold = raw.indexOf("**", cut);
+      if (nextBold !== -1 && nextBold - cut <= 25) cut = nextBold + 2;
+    }
+    if (cut === maxLen && !/\s$/.test(raw.slice(0, cut)) && raw[cut] && !/[\s.,;:]/.test(raw[cut])) {
+      const sp = raw.slice(0, cut).lastIndexOf(" ");
+      if (sp > maxLen * 0.6) cut = sp;
+    }
+    return raw.slice(0, cut).trimEnd();
+  }
+
   function inlineMd(text) {
-    let s = esc(text);
-    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-    s = s.replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>");
-    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    let raw = String(text || "");
+    const codeHtmls = [];
+    const mathTokens = [];
+    raw = raw.replace(/`([^`]+)`/g, (_, code) => {
+      const idx = codeHtmls.length;
+      codeHtmls.push(`<code>${esc(code)}</code>`);
+      return `\u0000C${idx}\u0000`;
+    });
+    raw = raw.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
+      const idx = mathTokens.length;
+      mathTokens.push({ expr, display: true });
+      return `\u0000M${idx}\u0000`;
+    });
+    raw = raw.replace(/(?<!\\)\$(?!\$)(?!\s)((?:[^$\\\n]|\\.)+?)(?<!\s)\$(?!\d)/g, (_, expr) => {
+      const idx = mathTokens.length;
+      mathTokens.push({ expr, display: false });
+      return `\u0000M${idx}\u0000`;
+    });
+    raw = raw.replace(/\\\$/g, "$");
+
+    let s = esc(raw);
+    s = s.replace(/\*\*\*([^*\n]+)\*\*\*/g, "<strong><em>$1</em></strong>");
+    s = s.replace(/\*\*((?:[^*\n]|\*(?!\*))+?)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
     s = s.replace(/<em>\((Nivel de Bloom:[^)]+)\)<\/em>|\((Nivel de Bloom:[^)]+)\)/gi, (_, a, b) => `<span class="bloom-pill">${a || b}</span>`);
+    s = s.replace(/\u0000M(\d+)\u0000/g, (_, idx) => {
+      const tok = mathTokens[Number(idx)];
+      return tok ? renderLatexHtml(tok.expr, tok.display) : "";
+    });
+    s = s.replace(/\u0000C(\d+)\u0000/g, (_, idx) => codeHtmls[Number(idx)] || "");
     return s;
   }
 
@@ -1060,6 +1189,26 @@
         while (i < lines.length && !lines[i].trim().startsWith("```")) { buf.push(lines[i]); i++; }
         i++;
         out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`);
+        continue;
+      }
+      if (line.trim().startsWith("$$")) {
+        const trimmed = line.trim();
+        if (trimmed.length > 2 && trimmed.endsWith("$$")) {
+          out.push(`<div class="math-block">${renderLatexHtml(trimmed.slice(2, -2).trim(), true)}</div>`);
+          i++;
+          continue;
+        }
+        const buf = [];
+        const firstRest = trimmed.slice(2).trim();
+        if (firstRest) buf.push(firstRest);
+        i++;
+        while (i < lines.length && !lines[i].trim().endsWith("$$")) { buf.push(lines[i]); i++; }
+        if (i < lines.length) {
+          const tail = lines[i].trim().slice(0, -2).trim();
+          if (tail) buf.push(tail);
+          i++;
+        }
+        out.push(`<div class="math-block">${renderLatexHtml(buf.join("\n"), true)}</div>`);
         continue;
       }
       if (!line.trim()) { i++; continue; }
@@ -1101,7 +1250,7 @@
       const p = [line.trim()]; i++;
       while (
         i < lines.length && lines[i].trim() !== "" && !lines[i].trim().startsWith("#") &&
-        !lines[i].trim().startsWith("```") && !lines[i].trim().startsWith(">") &&
+        !lines[i].trim().startsWith("```") && !lines[i].trim().startsWith("$$") && !lines[i].trim().startsWith(">") &&
         !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i]) &&
         !/^\s*(---+|\*\*\*+)\s*$/.test(lines[i]) &&
         !(lines[i].includes("|") && i + 1 < lines.length && isSep(lines[i + 1]))
@@ -1888,7 +2037,7 @@
           <h2 style="margin:0 0 6px; font-size:26px;">Resumen Ejecutivo: ${esc(t.shortTitle)}</h2>
           <p style="margin:0 auto 18px; color:var(--text-soft); max-width:640px;">Las ${mods.length} ideas clave que debes llevarte de esta clase listas para aplicar en tu empresa:</p>
           <div class="summary-tiles" style="text-align:left;">
-            ${mods.map((m) => `<div class="summary-tile"><div class="summary-tile-num">Clave ${m.num}</div><h4>${inlineMd(m.title)}</h4><p>${inlineMd(m.highlight.slice(0, 170))}${m.highlight.length > 170 ? "…" : ""}</p></div>`).join("")}
+            ${mods.map((m) => { const hi = truncateMdSafe(m.highlight, 170); return `<div class="summary-tile"><div class="summary-tile-num">Clave ${m.num}</div><h4>${inlineMd(m.title)}</h4><p>${inlineMd(hi)}${hi.length < (m.highlight || "").length ? "…" : ""}</p></div>`; }).join("")}
           </div>
           <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:22px;">
             <button class="btn ${isDone ? "btn-success" : "btn-primary"}" id="finishAndNextBtn" style="padding:12px 24px; font-size:14.5px;">
