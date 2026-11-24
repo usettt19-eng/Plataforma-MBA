@@ -7,7 +7,7 @@
   const LEGACY_KEY_V1 = "campus_cert_dind_state_v1";
   const THEME_KEY = "campus_cert_dind_theme_v1";
   const NEEDS_FULL_DATA = new Set(["dashboard", "topic", "workshop", "exam", "certificate", "portfolio"]);
-  const ASSET_VERSION = "20261124b";
+  const ASSET_VERSION = "20261124c";
 
   function getMeta(pid = ui.programId) {
     return window.PROGRAMS?.[pid] || CATALOG[pid] || null;
@@ -113,6 +113,228 @@
         overlay.querySelector("#closeVisualZoomBtn").onclick = closeModal;
         document.addEventListener("keydown", onEsc);
         document.body.appendChild(overlay);
+      };
+    });
+  }
+
+  const IAEL_CONNECTOR_OPEN_TOPICS = new Set([
+    "b02-t01", "b02-t05", "b05-t01", "b05-t02",
+    "b06-t01", "b06-t02", "b06-t06", "b06-t09", "b06-t11"
+  ]);
+
+  const IAEL_CONNECTOR_LABS = {
+    b02: {
+      statusTag: "IFC / Bridge oficial · Sin API directa en DIALux",
+      title: "Conexión real: Revit MEP ↔ DIALux evo (IFC / Bridge) + Auditoría con IA",
+      honestNote: "Transparencia técnica: DIALux evo no dispone hoy de API pública ni servidor MCP directo. La conexión profesional enlaza Revit ↔ DIALux mediante IFC y el complemento DIALux Bridge for Revit (DIALux evo Pro), y conecta resultados con ChatGPT o Claude mediante tablas CSV/Excel/PDF anonimizadas.",
+      steps: [
+        "<strong>Preparar vista 3D limpia en Revit:</strong> oculta mobiliario prescindible, conserva arquitectura + <em>Habitaciones / Espacios</em> y exporta vía <code>Archivo → Exportar → IFC</code> (<code>IFC 2x3</code> o <code>IFC4</code>).",
+        "<strong>Calcular en DIALux evo:</strong> importa el <code>.ifc</code>, verifica niveles/escala y dimensiona luminarias reales (<code>.ldt</code>/<code>.ies</code>) validando <code>Em</code>, <code>U0</code>, <code>UGR</code> y <code>VEEI</code>.",
+        "<strong>Retornar luminarias a Revit (opcional Pro):</strong> exporta el IFC lumínico desde DIALux y cárgalo en Revit con <strong>DIALux Bridge for Revit</strong> para sincronizar familias nativas y parámetros.",
+        "<strong>Auditar resultados con IA (anonimizados):</strong> exporta la tabla resumen de locales desde DIALux (sin datos confidenciales de cliente) y pásala a ChatGPT o Claude para detectar locales fuera de criterio y redactar borrador de memoria lumínica."
+      ],
+      snippets: [
+        {
+          label: "Prompt de auditoría de resultados DIALux (CSV/PDF anonimizado)",
+          code: `Actúa como revisor técnico de iluminación (QA/QC).\nAnaliza esta tabla exportada de DIALux evo (recinto, área m2, Em lux, U0, UGR, VEEI y potencia instalada W).\n1. Señala cada recinto que NO cumpla el objetivo de referencia indicado en la columna final.\n2. Calcula el margen porcentual de desviación sin inventar valores no presentes.\n3. Propón ajustes concretos a probar manualmente en DIALux (espaciado, flujo o montaje).`
+        }
+      ],
+      videos: [
+        {
+          id: "pUK5hV-CYFA",
+          title: "¿Cómo Importar Archivos IFC? | DIALux evo",
+          channel: "Luxdey Lighting Academy",
+          note: "Importación paso a paso de modelos IFC en DIALux evo conservando plantas y geometría."
+        },
+        {
+          id: "KcXx5AhREgk",
+          title: "COMO EXPORTAR DE REVIT A DIALUX",
+          channel: "Jonatan German",
+          note: "Preparación de vistas en Revit y parámetros de exportación IFC compatibles con DIALux."
+        }
+      ]
+    },
+    b05: {
+      statusTag: "Datasmith Direct Link oficial",
+      title: "Conexión real: Revit MEP ↔ Twinmotion (Datasmith Direct Link) + Apoyo IA",
+      honestNote: "Transparencia técnica: Datasmith Direct Link sincroniza geometría, jerarquía y escenas en vivo entre Revit y Twinmotion. Twinmotion es una herramienta de comunicación visual: nunca sustituye el cálculo de lux, uniformidad ni UGR de DIALux.",
+      steps: [
+        "<strong>Verificar integración:</strong> en Revit 2023.1+ ve a <code>Vista → Abrir en Twinmotion</code> (o instala el complemento oficial <strong>Unreal Datasmith Revit Exporter</strong> para tu versión de Revit).",
+        "<strong>Crear vista 3D dedicada:</strong> duplica una vista 3D (ej. <code>3D_Twinmotion</code>), fija nivel de detalle <em>Alto</em> y activa solo las categorías arquitectónicas y MEP (luminarias, bandejas, tableros) necesarias.",
+        "<strong>Enlazar desde Twinmotion:</strong> abre Twinmotion → <code>Importar → Direct Link</code>, selecciona tu proyecto Revit activo y elige agrupamiento por material o familia.",
+        "<strong>Sincronizar cambios y guion visual con IA:</strong> tras modificar el modelo en Revit pulsa <strong>Synchronize</strong>; apoya fichas de ambiente (<code>3000 K</code> vs. <code>4000 K</code>) y descripciones de presentación con ChatGPT o Claude."
+      ],
+      snippets: [
+        {
+          label: "Checklist técnico de vista 3D_Twinmotion antes de sincronizar",
+          code: `1. Vista dedicada: 3D_Twinmotion (sin filtros temporales ni cajas de sección olvidadas)\n2. Nivel de detalle: Alto (luminarias y canalizaciones MEP completas)\n3. Geometría depurada: vínculos ocultos innecesarios desactivados\n4. Coordenadas y unidades verificadas (mm / m) antes de Import -> Direct Link\n5. Contraste técnico: toda cifra de lux/UGR en presentación proviene de informe DIALux`
+        }
+      ],
+      videos: [
+        {
+          id: "WWRAVik_4H8",
+          title: "Aprende a conectar Revit y Twinmotion - Clase 07 - Curso de Twinmotion 2025 en español",
+          channel: "Dwisest",
+          note: "Configuración práctica de sincronización Revit ↔ Twinmotion mediante Direct Link en español."
+        },
+        {
+          id: "vMonkLpNYoQ",
+          title: "Guía Total Twinmotion U01_38 Conexión con Revit DirectLink",
+          channel: "Govinda Valbuena | Instructor de Arquitectura",
+          note: "Instalación del conector, ajustes de exportación y actualización en vivo de cambios BIM."
+        }
+      ]
+    },
+    b06: {
+      statusTag: "MCP (Claude) + Dynamo/Python (ChatGPT & Claude)",
+      title: "Conexión paso a paso: Revit MEP ↔ Claude y ChatGPT (MCP, pyRevit y Dynamo)",
+      honestNote: "Protocolo de seguridad: ejecuta SIEMPRE cualquier servidor MCP o script de Dynamo sobre una copia local de pruebas (.rvt), empieza en modo solo lectura/auditoría, anonimiza datos confidenciales bajo NDA y valida cualquier resultado técnico por profesional competente.",
+      steps: [
+        "<strong>Ruta A — Revit 2023–2026 + Claude Desktop con pyRevit 7+ MCP (gratuita):</strong> instala <strong>pyRevit v7+</strong> y <strong>Claude Desktop</strong>, abre <code>%APPDATA%\\Claude\\claude_desktop_config.json</code>, pega el JSON inferior sustituyendo <code>TU_USUARIO</code>, reinicia Claude con una copia abierta en Revit y comprueba el icono de herramientas conectadas (🔌).",
+        "<strong>Ruta B — Revit 2027 + MCP Público oficial de Autodesk (o NonicaTab):</strong> habilita el servidor <strong>Revit Public MCP Server</strong> (o conector certificado en Autodesk App Store) y vincúlalo en Claude Desktop para consultar parámetros, circuitos y cuadros de carga en lenguaje natural.",
+        "<strong>Ruta C — Revit + Dynamo + Python con ChatGPT o Claude (cualquier versión):</strong> abre <code>Gestionar → Dynamo</code>, añade un nodo <code>Python Script</code> (<code>CPython3</code>), indica versión de Revit y categoría MEP exacta (<code>OST_ElectricalFixtures</code>, <code>OST_ElectricalCircuit</code>, <code>OST_LightingFixtures</code>) usando el prompt de ejemplo.",
+        "<strong>Auditoría controlada primero:</strong> comienza siempre con consultas de solo lectura (tomas sin circuito asignado, circuitos con carga nula o etiquetas duplicadas) antes de ejecutar scripts que escriban parámetros en el modelo."
+      ],
+      snippets: [
+        {
+          label: "%APPDATA%\\Claude\\claude_desktop_config.json (pyRevit MCP)",
+          code: `{\n  "mcpServers": {\n    "pyrevit": {\n      "command": "C:\\\\Users\\\\TU_USUARIO\\\\AppData\\\\Roaming\\\\pyRevit-Master\\\\bin\\\\pyrevit.exe",\n      "args": ["mcp"]\n    }\n  }\n}`
+        },
+        {
+          label: "Prompt seguro de solo lectura para Dynamo Python (Revit MEP / CPython3)",
+          code: `Genera código Python para el nodo Python Script (motor CPython3) de Dynamo en Revit [2024/2025/2026].\nObjetivo: SOLO LECTURA — listar en una tabla (ElementId, Nombre, Panel, Marca) todos los elementos de BuiltInCategory.OST_ElectricalFixtures que NO tengan sistema/circuito eléctrico asignado (ElectricalSystems vacío).\nRequisitos: no abras Transaction de escritura, maneja nulos de forma segura y devuelve lista de listas lista para exportar a Excel/CSV.`
+        }
+      ],
+      videos: [
+        {
+          id: "feTDbGDNxZM",
+          title: "Claude + Revit en 2026: MCP paso a paso | GitHub, Nonica y lo nuevo en 2026",
+          channel: "MANTIS | Reality Capture & Scan to BIM",
+          note: "Comparativa práctica de conectores MCP (GitHub, Nonica y configuración en Claude Desktop)."
+        },
+        {
+          id: "rqRtc89xA6o",
+          title: "¿Cómo conectar Revit a Claude con el MCP oficial de Autodesk?",
+          channel: "Insight Construction Academy",
+          note: "Configuración paso a paso del servidor MCP oficial de Autodesk y pruebas reales en modelo BIM."
+        },
+        {
+          id: "55xkomc7VEM",
+          title: "Cómo Conectar ChatGPT o Claude con Revit: Paso a Paso",
+          channel: "Formando Arquitectura",
+          note: "Guía en español para enlazar asistentes de IA con Autodesk Revit en flujos reales de estudio."
+        },
+        {
+          id: "O_FTkbAhAhc",
+          title: "Automaticé Revit con Dynamo y ChatGPT sin haberlo usado nunca (2024)",
+          channel: "IA con Christoph",
+          note: "Flujo práctico generando scripts Python/nodos de Dynamo asistidos por IA paso a paso."
+        }
+      ]
+    }
+  };
+
+  function renderSoftwareConnectorLab(pid, blockId, opts = {}) {
+    if (pid !== "iael") return "";
+    const lab = IAEL_CONNECTOR_LABS[blockId];
+    if (!lab) return "";
+    const isOpen = Boolean(opts.defaultOpen);
+    return `
+      <details class="connect-lab" ${isOpen ? "open" : ""}>
+        <summary class="connect-lab-head">
+          <span class="connect-lab-title">🔌 ${esc(lab.title)}</span>
+          <span class="connect-lab-right">
+            <span class="pill">${esc(lab.statusTag)}</span>
+            <span class="connect-lab-toggle">Ver pasos y vídeos ▾</span>
+          </span>
+        </summary>
+        <div class="connect-lab-body">
+          <div class="connect-note">${esc(lab.honestNote)}</div>
+          <div class="connect-subhead">🪜 Guía exacta paso a paso</div>
+          <ol class="connect-steps">
+            ${lab.steps.map((st) => `<li>${st}</li>`).join("")}
+          </ol>
+          ${(lab.snippets || []).map((snip) => `
+            <div class="connect-snippet">
+              <div class="connect-snippet-bar">
+                <span>${esc(snip.label)}</span>
+                <button type="button" class="btn btn-xs" data-copy-snippet>📋 Copiar</button>
+              </div>
+              <pre><code>${esc(snip.code)}</code></pre>
+            </div>
+          `).join("")}
+          <div class="connect-subhead" style="margin-top:16px;">🎬 Vídeos reales paso a paso (en español)</div>
+          <div class="yt-grid">
+            ${(lab.videos || []).map((v) => `
+              <article class="yt-card">
+                <div class="yt-frame">
+                  <button type="button" class="yt-thumb-btn" data-yt-play="${esc(v.id)}" data-yt-title="${esc(v.title)}" aria-label="Reproducir vídeo: ${esc(v.title)}">
+                    <img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="${esc(v.title)}" loading="lazy" />
+                    <span class="yt-play-badge">▶ Ver vídeo aquí</span>
+                  </button>
+                </div>
+                <div class="yt-meta">
+                  <div class="yt-title">${esc(v.title)}</div>
+                  <div class="yt-channel">📺 ${esc(v.channel)} · <a href="https://www.youtube.com/watch?v=${esc(v.id)}" target="_blank" rel="noopener">↗ Abrir en YouTube</a></div>
+                  <p class="yt-desc">${esc(v.note)}</p>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+          <p class="yt-attribution">Vídeos públicos de referencia en YouTube (crédito íntegro a sus autores originales). Si algún vídeo externo dejara de estar disponible, la guía paso a paso integrada sigue vigente.</p>
+        </div>
+      </details>
+    `;
+  }
+
+  async function copyTextSafe(txt) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(txt);
+        return true;
+      }
+    } catch {}
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function wireConnectorWidgets() {
+    elRoot.querySelectorAll("[data-yt-play]").forEach((btn) => {
+      btn.onclick = () => {
+        const vid = btn.getAttribute("data-yt-play");
+        const title = btn.getAttribute("data-yt-title") || "Vídeo tutorial de referencia";
+        const frame = btn.closest(".yt-frame");
+        if (!frame || !vid) return;
+        const iframe = document.createElement("iframe");
+        iframe.className = "yt-iframe";
+        iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(vid)}?autoplay=1&rel=0`;
+        iframe.title = title;
+        iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+        iframe.allowFullscreen = true;
+        frame.innerHTML = "";
+        frame.appendChild(iframe);
+      };
+    });
+    elRoot.querySelectorAll("[data-copy-snippet]").forEach((btn) => {
+      btn.onclick = async () => {
+        const codeEl = btn.closest(".connect-snippet")?.querySelector("code");
+        const txt = codeEl ? codeEl.textContent : "";
+        if (!txt) return;
+        const ok = await copyTextSafe(txt);
+        toast(ok ? "✅ Configuración / prompt copiado" : "Selecciona y copia el bloque manualmente");
       };
     });
   }
@@ -1803,6 +2025,7 @@
       </div>
 
       ${renderBlockVisualRef(ui.programId, t.blockId)}
+      ${renderSoftwareConnectorLab(ui.programId, t.blockId, { defaultOpen: true })}
 
       <article class="card md">
         ${visible.map((s) => `<section style="margin-bottom:28px;"><h2>${esc(s.heading)}</h2>${renderMd(s.content)}</section>`).join("")}
@@ -1821,6 +2044,7 @@
     if (bDeck) bDeck.onclick = () => { ui.studentReadingMode = false; render(); };
     wireTopicFooterButtons(t, prev, next);
     wireVisualZoomButtons();
+    wireConnectorWidgets();
     elRoot.querySelectorAll("[data-ttab]").forEach((btn) => (btn.onclick = () => { ui.topicTab = btn.getAttribute("data-ttab"); render(); }));
   }
 
@@ -1900,6 +2124,7 @@
             ${objs.map((o) => `<div class="obj-card"><span class="bloom-badge ${bloomClass(o.bloom)}">${esc(o.bloom)}</span><div style="font-size:13.6px; line-height:1.48;">${inlineMd(o.text)}</div></div>`).join("")}
           </div>
           ${renderBlockVisualRef(ui.programId, t.blockId)}
+          ${renderSoftwareConnectorLab(ui.programId, t.blockId, { defaultOpen: IAEL_CONNECTOR_OPEN_TOPICS.has(t.id) })}
           <div style="margin-top:24px; text-align:center;">
             <button class="btn btn-primary" id="startDeckBtn" style="padding:12px 28px; font-size:15px; border-radius:12px;">▶ Empezar presentación interactiva →</button>
           </div>
@@ -2230,6 +2455,7 @@
     }
     wireTopicFooterButtons(t, prev, next);
     wireVisualZoomButtons();
+    wireConnectorWidgets();
   }
 
   // =====================================================
@@ -2456,7 +2682,7 @@
         </div>
         <h1 style="margin:0 0 6px; font-size:23px;">${esc(wsMeta.title)}</h1>
         <p style="margin:0 0 20px; color:var(--text-soft);">${esc(wsMeta.subtitle)}</p>
-        ${ui.programId === "iael" ? `${renderBlockVisualRef(ui.programId, b.id)}<div style="height:14px;"></div>` : ""}
+        ${ui.programId === "iael" ? `${renderBlockVisualRef(ui.programId, b.id)}${renderSoftwareConnectorLab(ui.programId, b.id, { defaultOpen: true })}<div style="height:14px;"></div>` : ""}
         ${innerHtml}
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px; padding-top:14px; border-top:1px solid var(--border);">
           <button class="btn" id="wsBackBlock">← Volver al ${esc(b.code)}</button>
@@ -2717,6 +2943,7 @@
       });
     }
     wireVisualZoomButtons();
+    wireConnectorWidgets();
 
     document.getElementById("saveWsBtn").onclick = () => {
       pdb.workshops[b.id] = { completed: true, data: collectCalcData(), updatedAt: new Date().toISOString() };
