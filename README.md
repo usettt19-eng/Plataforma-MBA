@@ -2,7 +2,7 @@
 
 Plataforma educativa **Multi-Programa** con **Campus de Certificación Online interactivo**, diseñada para mandos intermedios, directores comerciales, *project managers*, emprendedores y altos directivos en transformación digital.
 
-Reúne **4 programas completos (38 bloques · 180 temas · 720 horas de guías didácticas)** accesibles desde un selector unificado con clases tipo presentación interactiva, narrador de audio en español, acumulador inteligente de tiempo de estudio, **11 calculadoras ejecutivas en vivo**, **38 exámenes autoevaluables (190 preguntas)** y diplomas digitales verificables por QR.
+Reúne **5 programas completos (44 bloques · 230 temas · 920 horas de guías didácticas)** accesibles desde un selector unificado con clases tipo presentación interactiva, narrador de audio en español, acumulador inteligente de tiempo de estudio, **13 calculadoras en vivo**, **44 exámenes autoevaluables (220 preguntas)**, esquemas técnicos SVG y diplomas digitales verificables por QR.
 
 ---
 
@@ -14,24 +14,26 @@ Reúne **4 programas completos (38 bloques · 180 temas · 720 horas de guías d
 | **💼 Global MBA en Dirección Comercial y Ventas** | [programa-mba-comercial/README.md](programa-mba-comercial/README.md) | 11 | 70 | 280 h · 90 ECTS · Online | `CERT-GMBA-2026-XXXXXX` |
 | **📐 Preparación PMP y Dirección de Proyectos** | [programa-pmp/README.md](programa-pmp/README.md) | 9 | 27 | 108 h · Online | `CERT-PMP-2026-XXXXXX` |
 | **🏛️ Executive MBA (EMBA)** | [programa-emba/README.md](programa-emba/README.md) | 8 | 26 | 104 h · 19 Créditos | `CERT-EMBA-2026-XXXXXX` |
-| **Total plataforma** | [README_PROYECTO.md](README_PROYECTO.md) | **38** | **180** | **720 h** | **4 diplomas independientes** |
+| **⚡ IA Aplicada al Diseño y Modelado de Instalaciones Eléctricas** | [programa-ia-electrica/README.md](programa-ia-electrica/README.md) | 6 | 50 | 200 h · Técnica BIM + IA | `CERT-IAEL-2026-XXXXXX` |
+| **Total plataforma** | [README_PROYECTO.md](README_PROYECTO.md) | **44** | **230** | **920 h** | **5 diplomas independientes** |
 
-> **Notas de acreditación:**
+> **Notas de acreditación y alcance:**
 > - El diploma de *Preparación PMP y Dirección de Proyectos* acredita la formación interna completada y no equivale a la certificación oficial PMP® de PMI (verificar requisitos, PDUs y ECO vigente en PMI.org).
 > - El *Executive MBA (EMBA)* es una adaptación didáctica independiente de la estructura modular de 19 créditos; requisitos y costes oficiales deben consultarse en cada institución.
+> - *IA Aplicada al Diseño y Modelado de Instalaciones Eléctricas* es una especialización técnica en diseño eléctrico, DIALux, Revit MEP, Twinmotion e IA responsable; no constituye un título MBA ni habilita legalmente para firmar proyectos o instalaciones sin la titulación y verificación normativa aplicable en cada país.
 
 ---
 
 ## Funcionalidades principales del Campus (`campus-certificacion/`)
 
-- **Página principal de selección de programas (`🏛️ Programas`):** progreso, talleres, notas, tiempo y diplomas aislados por programa, con **carga bajo demanda** (`data/catalog-meta.js` ~17 KB al inicio; cada `program-*.js` se descarga solo al abrirlo).
-- **Cuentas en la nube con Supabase (Auth + PostgreSQL + RLS):** registro e inicio de sesión por correo, migración no destructiva desde modo local/invitado y sincronización automática de temas, notas, talleres, exámenes, historial de estudio y diplomas (con respaldo offline en `localStorage` si navegas sin sesión).
-- **Presentaciones interactivas en Modo Alumno (`🎓`):** 8 diapositivas por tema (Portada + Objetivos Bloom, 4 Claves con pestañas de *Definiciones / Ejemplo Real / Errores / Autochequeo*, Caso Práctico interactivo, Flashcards 3D del glosario y Resumen Ejecutivo).
+- **Página principal de selección de programas (`🏛️ Programas`):** progreso, talleres, notas, tiempo y diplomas aislados por programa, con **carga bajo demanda** (`data/catalog-meta.js` ~20 KB al inicio; cada `program-*.js` se descarga solo al abrirlo).
+- **Cuentas en la nube con Supabase (Auth + PostgreSQL + RLS):** registro/gestión por administración con PostgreSQL RLS, migración no destructiva y sincronización automática de temas, notas, talleres, exámenes, historial de estudio y diplomas (con respaldo offline en `localStorage` si navegas sin sesión).
+- **Presentaciones interactivas en Modo Alumno (`🎓`):** 8 diapositivas por tema (Portada + Objetivos Bloom + láminas técnicas SVG en `iael`, 4 Claves con pestañas de *Definiciones / Ejemplo Real / Errores / Autochequeo*, Caso Práctico interactivo, Flashcards 3D del glosario y Resumen Ejecutivo).
 - **Guía docente completa en Modo Formador (`👩‍🏫`):** las 10 secciones del diseño instruccional (secuencia de 240 min, actividades, rúbrica de 4 niveles, guion de diapositivas y adaptaciones) descargables en `.md`.
 - **Narrador de audio en español + Auto-clase (`🔊`):** lectura limpia de diapositivas (Web Speech API), control de velocidad (`0.85x`–`1.5x`), selección de voz y avance automático.
 - **Acumulador inteligente de tiempo de estudio (`⏱`):** conteo activo en clases, talleres y exámenes con pausa automática anti-inactividad (3 min o cambio de pestaña) e historial de sesiones.
-- **38 Talleres prácticos con calculadoras en tiempo real:** Matriz de Decisión Ponderada, Priorizador RICE + MVP, Unit Economics E-commerce, Embudo CRO, Calculadora SEM/ROAS, Simulador P&G/EBITDA, PERT + EMV de Riesgos, Valor Ganado (EVM), Elasticidad Precio–Demanda, Valoración DCF/WACC/VAN y Valoración M&A (EV/EBITDA).
-- **38 Exámenes autoevaluables (190 preguntas situacionales)**, **Diploma PDF A4 horizontal con código QR real (`?verify=CERT-...`)**, **Verificador Público conectado por RPC (`verify_certificate`)** y **Portafolio `.md` exportable**.
+- **44 Talleres prácticos con 13 calculadoras en tiempo real:** Matriz de Decisión Ponderada, Priorizador RICE + MVP, Unit Economics E-commerce, Embudo CRO, Calculadora SEM/ROAS, Simulador P&G/EBITDA, PERT + EMV de Riesgos, Valor Ganado (EVM), Elasticidad Precio–Demanda, Valoración DCF/WACC/VAN, Valoración M&A (EV/EBITDA), **Carga Eléctrica / Corriente `Ib` / Caída de Tensión `ΔV`** y **Método de los Lúmenes / VEEI**.
+- **44 Exámenes autoevaluables (220 preguntas situacionales)**, **Diploma PDF A4 horizontal con código QR real (`?verify=CERT-...`)**, **Verificador Público conectado por RPC (`verify_certificate`)** y **Portafolio `.md` exportable**.
 
 ---
 
@@ -58,7 +60,8 @@ El frontend ya incluye integración con **Supabase** ([supabase/schema.sql](supa
 
 La carpeta [landing/](landing/index.html) contiene la web pública de captación y ventas lista para `https://academia.useservices.company/`:
 - SEO técnico completo (`canonical`, Open Graph con [og-cover.png](landing/og-cover.png), Twitter Cards, [robots.txt](landing/robots.txt), [sitemap.xml](landing/sitemap.xml) y 4 bloques JSON-LD `schema.org`).
-- Explorador completo de los **38 bloques reales**, **2 simuladores interactivos en vivo**, comparativa, planes editables en [landing-config.js](landing/landing-config.js) y formulario conectado a `public.leads` en Supabase ([leads-migration.sql](supabase/leads-migration.sql)).
+- Explorador completo de los **44 bloques reales**, **2 simuladores interactivos en vivo**, comparativa, planes editables en [landing-config.js](landing/landing-config.js) y formulario conectado a `public.leads` en Supabase ([leads-migration.sql](supabase/leads-migration.sql)).
+- Recuerda también ejecutar [supabase/iael-migration.sql](supabase/iael-migration.sql) en SQL Editor si actualizas una base ya existente antes de añadir el 5.º programa (`iael`).
 - Configuración Nginx lista en [nginx-academia.conf](landing/nginx-academia.conf).
 
 ### Alojamiento estático preconfigurado

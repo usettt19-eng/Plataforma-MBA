@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" width="920" height="420" role="img" aria-label="Esquema unifilar didáctico y sistema de puesta a tierra">
+  <defs>
+    <pattern id="grid1" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+    </pattern>
+    <marker id="arr1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7 Z" fill="#0f172a"/>
+    </marker>
+    <marker id="arrPe" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,1 L7,4 L0,7 Z" fill="#15803d"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="420" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <rect width="920" height="420" rx="14" fill="url(#grid1)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="920" height="52" rx="14" fill="#0f172a"/>
+  <rect x="0" y="38" width="920" height="14" fill="#0f172a"/>
+  <text x="24" y="24" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#fde047">BLOQUE 1 · ARQUITECTURA ELÉCTRICA, UNIFILAR Y PUESTA A TIERRA (PAT)</text>
+  <text x="24" y="42" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" fill="#cbd5e1">Trazabilidad: Acometida → Medida → Protecciones Generales → Circuitos Derivados + Referencia Equipotencial PE</text>
+
+  <!-- Main Vertical Feeder Spine (Left Zone) -->
+  <rect x="30" y="72" width="150" height="44" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="105" y="91" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#1e3a8a">RED / ACOMETIDA</text>
+  <text x="105" y="106" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" fill="#475569">Tensión nominal · L+N+PE</text>
+
+  <line x1="105" y1="116" x2="105" y2="146" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arr1)"/>
+
+  <rect x="45" y="150" width="120" height="38" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.6"/>
+  <text x="105" y="167" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">kWh · MEDIDOR</text>
+  <text x="105" y="180" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#64748b">Derivación individual</text>
+
+  <line x1="105" y1="188" x2="105" y2="216" stroke="#0f172a" stroke-width="2.5" marker-end="url(#arr1)"/>
+
+  <!-- IGA Box -->
+  <rect x="30" y="220" width="150" height="54" rx="8" fill="#fefce8" stroke="#ca8a04" stroke-width="2"/>
+  <text x="105" y="239" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#854d0e">IGA / GENERAL</text>
+  <text x="105" y="254" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" fill="#713f12">Calibre In · Poder corte Icu</text>
+  <text x="105" y="267" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#a16207">Corte omnipolar + ΔV máx.</text>
+
+  <!-- Feed from IGA to Main Busbar -->
+  <line x1="180" y1="247" x2="235" y2="247" stroke="#0f172a" stroke-width="2.5"/>
+  <line x1="235" y1="95" x2="235" y2="247" stroke="#0f172a" stroke-width="2.5"/>
+  <line x1="235" y1="95" x2="265" y2="95" stroke="#0f172a" stroke-width="2.5"/>
+
+  <!-- SPD Branch -->
+  <line x1="235" y1="247" x2="235" y2="305" stroke="#0f172a" stroke-width="2"/>
+  <rect x="195" y="305" width="130" height="44" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.6"/>
+  <text x="260" y="324" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="800" fill="#9a3412">SPD · Sobretensiones</text>
+  <text x="260" y="339" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#c2410c">Descarga a PE (T1/T2 según riesgo)</text>
+
+  <!-- Main Tablero Container -->
+  <rect x="265" y="68" width="445" height="220" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="280" y="86" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="800" fill="#334155">CUADRO GENERAL DE MANDO Y PROTECCIÓN (BARRAJE)</text>
+
+  <!-- Main horizontal busbar -->
+  <line x1="285" y1="108" x2="688" y2="108" stroke="#0f172a" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Differential RCD 1 & RCD 2 -->
+  <line x1="365" y1="108" x2="365" y2="132" stroke="#0f172a" stroke-width="2"/>
+  <rect x="292" y="132" width="146" height="34" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="365" y="148" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#155e75">RCD 1 · Diferencial</text>
+  <text x="365" y="160" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#0e7490">Sensibilidad IΔn (p. ej. 30 mA)</text>
+
+  <line x1="590" y1="108" x2="590" y2="132" stroke="#0f172a" stroke-width="2"/>
+  <rect x="517" y="132" width="146" height="34" rx="6" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+  <text x="590" y="148" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#155e75">RCD 2 · Diferencial</text>
+  <text x="590" y="160" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#0e7490">Selectividad por áreas</text>
+
+  <!-- Sub-bars under RCDs -->
+  <line x1="315" y1="178" x2="435" y2="178" stroke="#334155" stroke-width="2.5"/>
+  <line x1="365" y1="166" x2="365" y2="178" stroke="#334155" stroke-width="2"/>
+
+  <line x1="535" y1="178" x2="660" y2="178" stroke="#334155" stroke-width="2.5"/>
+  <line x1="590" y1="166" x2="590" y2="178" stroke="#334155" stroke-width="2"/>
+
+  <!-- 4 Circuits -->
+  <!-- C1 Alumbrado -->
+  <line x1="322" y1="178" x2="322" y2="205" stroke="#0f172a" stroke-width="2" marker-end="url(#arr1)"/>
+  <rect x="278" y="208" width="90" height="64" rx="7" fill="#ffffff" stroke="#4f46e5" stroke-width="1.6"/>
+  <text x="323" y="225" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#312e81">C1 Alumbrado</text>
+  <text x="323" y="240" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">PIA Curva B/C</text>
+  <text x="323" y="253" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Sección Cu + PE</text>
+  <text x="323" y="265" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#4f46e5">Línea + Neutro</text>
+
+  <!-- C2 Tomas -->
+  <line x1="428" y1="178" x2="428" y2="205" stroke="#0f172a" stroke-width="2" marker-end="url(#arr1)"/>
+  <rect x="383" y="208" width="90" height="64" rx="7" fill="#ffffff" stroke="#0284c7" stroke-width="1.6"/>
+  <text x="428" y="225" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#0c4a6e">C2 Tomas</text>
+  <text x="428" y="240" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">PIA Termomagn.</text>
+  <text x="428" y="253" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Factor Demanda</text>
+  <text x="428" y="265" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#0284c7">Uso general</text>
+
+  <!-- C3 Clima / Fuerza -->
+  <line x1="540" y1="178" x2="540" y2="205" stroke="#0f172a" stroke-width="2" marker-end="url(#arr1)"/>
+  <rect x="492" y="208" width="96" height="64" rx="7" fill="#ffffff" stroke="#b45309" stroke-width="1.6"/>
+  <text x="540" y="225" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#78350f">C3 Fuerza/HVAC</text>
+  <text x="540" y="240" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Motores / Curva C-D</text>
+  <text x="540" y="253" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Comprobar ΔV</text>
+  <text x="540" y="265" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#b45309">Carga dedicada</text>
+
+  <!-- C4 Reserva -->
+  <line x1="650" y1="178" x2="650" y2="205" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
+  <rect x="602" y="208" width="94" height="64" rx="7" fill="#f1f5f9" stroke="#64748b" stroke-width="1.4" stroke-dasharray="4 2"/>
+  <text x="649" y="226" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#334155">C4 Reserva</text>
+  <text x="649" y="242" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#64748b">Espacio futuro</text>
+  <text x="649" y="255" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#64748b">(20–25 % panel)</text>
+
+  <!-- Right Panel: Earthing / PAT -->
+  <rect x="730" y="68" width="166" height="282" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="813" y="88" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#14532d">PUESTA A TIERRA</text>
+  <text x="813" y="102" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#15803d">Seguridad · Equipotencialidad</text>
+
+  <rect x="746" y="114" width="134" height="44" rx="6" fill="#ffffff" stroke="#22c55e" stroke-width="1.4"/>
+  <text x="813" y="132" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="800" fill="#166534">Barraje PE + BEP</text>
+  <text x="813" y="146" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" fill="#475569">Masas metálicas y SPD</text>
+
+  <!-- Green PE bus connection from SPD & circuits -->
+  <line x1="325" y1="327" x2="746" y2="327" stroke="#15803d" stroke-width="2" stroke-dasharray="5 3"/>
+  <line x1="746" y1="327" x2="746" y2="158" stroke="#15803d" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrPe)"/>
+  <text x="530" y="320" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#15803d">Conductor de Protección (PE Verde-Amarillo) conectado a masas y SPD</text>
+
+  <line x1="813" y1="158" x2="813" y2="188" stroke="#15803d" stroke-width="2.5" marker-end="url(#arrPe)"/>
+
+  <rect x="746" y="192" width="134" height="36" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.4"/>
+  <text x="813" y="208" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#166534">Borne Puesta a Tierra</text>
+  <text x="813" y="220" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" fill="#475569">Seccionador de prueba</text>
+
+  <line x1="813" y1="228" x2="813" y2="255" stroke="#15803d" stroke-width="2.5"/>
+  <!-- Ground Symbol & Rod -->
+  <rect x="748" y="255" width="130" height="84" rx="7" fill="#dcfce7" stroke="#15803d" stroke-width="1.4"/>
+  <line x1="813" y1="262" x2="813" y2="286" stroke="#14532d" stroke-width="3"/>
+  <line x1="785" y1="286" x2="841" y2="286" stroke="#14532d" stroke-width="2.5"/>
+  <line x1="794" y1="293" x2="832" y2="293" stroke="#14532d" stroke-width="2.2"/>
+  <line x1="803" y1="300" x2="823" y2="300" stroke="#14532d" stroke-width="2"/>
+  <text x="813" y="317" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#14532d">Electrodo / Malla PAT</text>
+  <text x="813" y="330" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.8" fill="#166534">Medición real: Telurómetro</text>
+
+  <!-- Footer disclaimer -->
+  <rect x="20" y="366" width="880" height="38" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="460" y="383" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#92400e">Esquema didáctico orientativo: la simbología exacta, calibres, curvas y valores máximos de caída de tensión (ΔV) o resistencia de tierra (R)</text>
+  <text x="460" y="397" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#78350f">deben verificarse siempre conforme al reglamento eléctrico nacional vigente, edición aplicable y validación por profesional habilitado.</text>
+</svg>

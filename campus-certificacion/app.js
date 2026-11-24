@@ -1,7 +1,7 @@
 (function () {
   window.PROGRAMS = window.PROGRAMS || {};
   const CATALOG = window.PROGRAM_CATALOG || window.PROGRAMS || {};
-  const PROGRAM_ORDER = ["dind", "gmba", "pmp", "emba"].filter((id) => CATALOG[id] || window.PROGRAMS[id]);
+  const PROGRAM_ORDER = ["dind", "gmba", "pmp", "emba", "iael"].filter((id) => CATALOG[id] || window.PROGRAMS[id]);
   const STORAGE_KEY_V2 = "campus_multicert_state_v2";
   const USER_STORAGE_PREFIX = "campus_multicert_user_v1_";
   const LEGACY_KEY_V1 = "campus_cert_dind_state_v1";
@@ -17,7 +17,103 @@
     if (pid === "gmba") return window.ASSESSMENTS_GMBA || null;
     if (pid === "pmp") return window.ASSESSMENTS_PMP || null;
     if (pid === "emba") return window.ASSESSMENTS_EMBA || null;
+    if (pid === "iael") return window.ASSESSMENTS_IAEL || null;
     return null;
+  }
+
+  const IAEL_BLOCK_VISUALS = {
+    b01: {
+      src: "assets/iael/bloque-01-unifilar-pat.svg",
+      title: "Esquema técnico · Arquitectura unifilar y puesta a tierra (PAT)",
+      caption: "Flujo jerárquico desde acometida y protecciones generales hasta circuitos derivados y barraje equipotencial PE. Referencia didáctica: contrastar siempre simbología y reglamentos locales vigentes."
+    },
+    b02: {
+      src: "assets/iael/bloque-02-dialux-fotometria.svg",
+      title: "Diagrama fotométrico · Curva polar .ldt/.ies, reflectancias y DIALux",
+      caption: "Relación entre curva polar de luminaria, reflectancias del recinto (techo/paredes/suelo), plano útil (0,85 m) y métricas de evaluación (Em, U0, UGR, VEEI)."
+    },
+    b03: {
+      src: "assets/iael/bloque-03-revit-mep-3d.svg",
+      title: "Sección BIM 3D · Enrutamiento Revit MEP y coordinación espacial",
+      caption: "Organización por sistemas (acometidas, alumbrado, tomacorrientes), uniones/conduletas y reservas libres bajo viga y ductos HVAC."
+    },
+    b04: {
+      src: "assets/iael/bloque-04-documentacion-planos.svg",
+      title: "Anatomía de lámina BIM · Plantillas, etiquetas paramétricas y PDF",
+      caption: "Composición profesional de plano técnico conectado a parámetros vivos del modelo, cuadro de cargas, leyenda de simbología y cartela."
+    },
+    b05: {
+      src: "assets/iael/bloque-05-twinmotion-flujo.svg",
+      title: "Flujo interoperable realista · DIALux + Revit MEP → Twinmotion",
+      caption: "Qué se sincroniza realmente mediante Datasmith Direct Link y cómo se diferencia la presentación visual del cálculo fotométrico y eléctrico.",
+      extraSrc: "assets/iael/render-escena-iluminacion.svg",
+      extraTitle: "Estudio escénico · Temperatura de color (3000 K cálido vs. 4000 K neutro)",
+      extraCaption: "Ilustración visual de ambientación en Twinmotion. No sustituye la verificación cuantitativa de lux, uniformidad ni UGR en DIALux."
+    },
+    b06: {
+      src: "assets/iael/bloque-06-ia-workflow-validacion.svg",
+      title: "Flujo seguro de IA aplicada · Prompt → Contraste técnico → Firma humana",
+      caption: "Ciclo completo con anonimización previa de planos/clientes, contraste aritmético y normativo independiente y trazabilidad profesional."
+    }
+  };
+
+  function renderBlockVisualRef(pid, blockId) {
+    if (pid !== "iael") return "";
+    const vis = IAEL_BLOCK_VISUALS[blockId];
+    if (!vis) return "";
+    const items = [{ src: vis.src, title: vis.title, caption: vis.caption }];
+    if (vis.extraSrc) {
+      items.push({ src: vis.extraSrc, title: vis.extraTitle, caption: vis.extraCaption });
+    }
+    return `
+      <div class="visual-ref-card">
+        <div class="visual-ref-head">
+          <strong>📐 Lámina Técnica Visual del Bloque</strong>
+          <span style="font-size:12px; color:var(--text-soft);">Pulsa sobre la imagen para ampliar a pantalla completa</span>
+        </div>
+        <div class="visual-ref-grid">
+          ${items.map((it) => `
+            <figure class="visual-ref-figure">
+              <img class="visual-ref-img" src="${esc(it.src)}" alt="${esc(it.title)}" data-zoom-src="${esc(it.src)}" data-zoom-title="${esc(it.title)}" data-zoom-cap="${esc(it.caption)}" loading="lazy" />
+              <figcaption class="visual-ref-caption"><strong>${esc(it.title)}</strong><br/>${esc(it.caption)}</figcaption>
+            </figure>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function wireVisualZoomButtons() {
+    elRoot.querySelectorAll("[data-zoom-src]").forEach((imgEl) => {
+      imgEl.onclick = () => {
+        const src = imgEl.getAttribute("data-zoom-src");
+        const title = imgEl.getAttribute("data-zoom-title") || "";
+        const cap = imgEl.getAttribute("data-zoom-cap") || "";
+        document.getElementById("visualZoomOverlay")?.remove();
+        const overlay = document.createElement("div");
+        overlay.id = "visualZoomOverlay";
+        overlay.className = "visual-zoom-backdrop";
+        overlay.innerHTML = `
+          <div class="visual-zoom-modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+              <strong style="font-size:15px;">${esc(title)}</strong>
+              <button type="button" class="btn btn-xs" id="closeVisualZoomBtn" aria-label="Cerrar vista ampliada">✕ Cerrar</button>
+            </div>
+            <img src="${esc(src)}" alt="${esc(title)}" />
+            ${cap ? `<p style="margin:10px 0 0; font-size:12.5px; color:#475569; line-height:1.45;">${esc(cap)}</p>` : ""}
+          </div>
+        `;
+        const closeModal = () => {
+          overlay.remove();
+          document.removeEventListener("keydown", onEsc);
+        };
+        const onEsc = (ev) => { if (ev.key === "Escape") closeModal(); };
+        overlay.onclick = (ev) => { if (ev.target === overlay) closeModal(); };
+        overlay.querySelector("#closeVisualZoomBtn").onclick = closeModal;
+        document.addEventListener("keydown", onEsc);
+        document.body.appendChild(overlay);
+      };
+    });
   }
 
   function getBlockTopicIds(b) {
@@ -1553,6 +1649,8 @@
         ${trainerTabs.map((tb) => `<button class="tab-btn ${ui.topicTab === tb.id ? "active" : ""}" data-ttab="${tb.id}">${tb.label}</button>`).join("")}
       </div>
 
+      ${renderBlockVisualRef(ui.programId, t.blockId)}
+
       <article class="card md">
         ${visible.map((s) => `<section style="margin-bottom:28px;"><h2>${esc(s.heading)}</h2>${renderMd(s.content)}</section>`).join("")}
       </article>
@@ -1569,6 +1667,7 @@
     const bDeck = document.getElementById("backToDeckBtn");
     if (bDeck) bDeck.onclick = () => { ui.studentReadingMode = false; render(); };
     wireTopicFooterButtons(t, prev, next);
+    wireVisualZoomButtons();
     elRoot.querySelectorAll("[data-ttab]").forEach((btn) => (btn.onclick = () => { ui.topicTab = btn.getAttribute("data-ttab"); render(); }));
   }
 
@@ -1647,6 +1746,7 @@
           <div class="obj-grid">
             ${objs.map((o) => `<div class="obj-card"><span class="bloom-badge ${bloomClass(o.bloom)}">${esc(o.bloom)}</span><div style="font-size:13.6px; line-height:1.48;">${inlineMd(o.text)}</div></div>`).join("")}
           </div>
+          ${renderBlockVisualRef(ui.programId, t.blockId)}
           <div style="margin-top:24px; text-align:center;">
             <button class="btn btn-primary" id="startDeckBtn" style="padding:12px 28px; font-size:15px; border-radius:12px;">▶ Empezar presentación interactiva →</button>
           </div>
@@ -1974,6 +2074,7 @@
       };
     }
     wireTopicFooterButtons(t, prev, next);
+    wireVisualZoomButtons();
   }
 
   // =====================================================
@@ -2147,6 +2248,40 @@
         </div>
         <div class="calc-result" id="calcOutput"></div>
       `;
+    } else if (wsMeta.calculator === "electric_load_drop") {
+      const d = Object.assign({ sys: "3F", volt: 400, kw: 18, fd: 80, pf: 0.90, len: 45, sec: 10, maxDv: 3 }, saved.data);
+      innerHtml = `
+        <div class="calc-grid">
+          <div class="field-group"><label>Sistema de suministro</label>
+            <select class="input" id="elSys">
+              <option value="3F" ${d.sys === "3F" ? "selected" : ""}>Trifásico (√3)</option>
+              <option value="1F" ${d.sys === "1F" ? "selected" : ""}>Monofásico (2·L)</option>
+            </select>
+          </div>
+          <div class="field-group"><label>Tensión nominal V (400 / 230 / 220)</label><input class="input" type="number" step="1" min="12" id="elVolt" value="${d.volt}" /></div>
+          <div class="field-group"><label>Potencia instalada total (kW)</label><input class="input" type="number" step="0.5" min="0.1" id="elKw" value="${d.kw}" /></div>
+          <div class="field-group"><label>Factor de demanda / simultaneidad (%)</label><input class="input" type="number" step="5" min="10" max="100" id="elFd" value="${d.fd}" /></div>
+          <div class="field-group"><label>Factor de potencia (cos φ)</label><input class="input" type="number" step="0.01" min="0.5" max="1" id="elPf" value="${d.pf}" /></div>
+          <div class="field-group"><label>Longitud de la línea (m)</label><input class="input" type="number" step="1" min="1" id="elLen" value="${d.len}" /></div>
+          <div class="field-group"><label>Sección del conductor de cobre (mm²)</label><input class="input" type="number" step="0.5" min="1.5" id="elSec" value="${d.sec}" /></div>
+          <div class="field-group"><label>Límite caída de tensión objetivo (%)</label><input class="input" type="number" step="0.5" min="0.5" max="10" id="elMaxDv" value="${d.maxDv}" /></div>
+        </div>
+        <div class="calc-result" id="calcOutput"></div>
+      `;
+    } else if (wsMeta.calculator === "lighting_lumen") {
+      const d = Object.assign({ len: 12, wid: 8, lux: 500, lm: 4200, w: 34, cu: 0.65, mf: 0.80 }, saved.data);
+      innerHtml = `
+        <div class="calc-grid">
+          <div class="field-group"><label>Largo del local (m)</label><input class="input" type="number" step="0.5" min="1" id="ltLen" value="${d.len}" /></div>
+          <div class="field-group"><label>Ancho del local (m)</label><input class="input" type="number" step="0.5" min="1" id="ltWid" value="${d.wid}" /></div>
+          <div class="field-group"><label>Iluminancia media objetivo Em (lux)</label><input class="input" type="number" step="25" min="20" id="ltLux" value="${d.lux}" /></div>
+          <div class="field-group"><label>Flujo útil por luminaria (lm)</label><input class="input" type="number" step="100" min="100" id="ltLm" value="${d.lm}" /></div>
+          <div class="field-group"><label>Potencia por luminaria incl. equipo (W)</label><input class="input" type="number" step="1" min="1" id="ltW" value="${d.w}" /></div>
+          <div class="field-group"><label>Factor de utilización (CU · 0,30–0,85)</label><input class="input" type="number" step="0.05" min="0.1" max="1" id="ltCu" value="${d.cu}" /></div>
+          <div class="field-group"><label>Factor de mantenimiento (MF · 0,60–0,90)</label><input class="input" type="number" step="0.05" min="0.2" max="1" id="ltMf" value="${d.mf}" /></div>
+        </div>
+        <div class="calc-result" id="calcOutput"></div>
+      `;
     } else {
       innerHtml = wsMeta.fields.map((f) => `
         <div class="field-group">
@@ -2166,6 +2301,7 @@
         </div>
         <h1 style="margin:0 0 6px; font-size:23px;">${esc(wsMeta.title)}</h1>
         <p style="margin:0 0 20px; color:var(--text-soft);">${esc(wsMeta.subtitle)}</p>
+        ${ui.programId === "iael" ? `${renderBlockVisualRef(ui.programId, b.id)}<div style="height:14px;"></div>` : ""}
         ${innerHtml}
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px; padding-top:14px; border-top:1px solid var(--border);">
           <button class="btn" id="wsBackBlock">← Volver al ${esc(b.code)}</button>
@@ -2352,6 +2488,66 @@
         out.innerHTML = `<div style="margin-bottom:10px;"><span class="pill ${ok ? "success" : "danger"}">${ok ? "✅ Adquisición creadora de valor (Sinergias > Prima)" : "⚠️ Destruye valor para el comprador (Prima > Sinergias)"}</span></div><div class="calc-grid"><div><small style="color:var(--text-soft);">EV / Equity Standalone</small><div style="font-size:19px; font-weight:800;">${Math.round(evStand).toLocaleString("es-ES")} € / ${Math.round(eqStand).toLocaleString("es-ES")} €</div></div><div><small style="color:var(--text-soft);">Precio Oferta Equity (con prima)</small><div style="font-size:20px; font-weight:800; color:var(--primary);">${Math.round(offerEq).toLocaleString("es-ES")} €</div></div><div><small style="color:var(--text-soft);">Valor neto comprador (Sinergias - Prima)</small><div style="font-size:20px; font-weight:800; color:${ok ? "var(--success)" : "var(--danger)"};">${netBuyerVal >= 0 ? "+" : ""}${Math.round(netBuyerVal).toLocaleString("es-ES")} €</div></div></div>`;
         return { ebitda: eb, mult: mul, netDebt: debt, premiumPct: premPct, pvSynergies: pvSyn, evStand: Math.round(evStand), offerEq: Math.round(offerEq), netBuyerValue: Math.round(netBuyerVal) };
       }
+      if (wsMeta.calculator === "electric_load_drop") {
+        const sys = document.getElementById("elSys").value === "1F" ? "1F" : "3F";
+        const volt = Math.max(12, Number(document.getElementById("elVolt").value) || 400);
+        const kw = Math.max(0.1, Number(document.getElementById("elKw").value) || 18);
+        const fd = Math.min(100, Math.max(1, Number(document.getElementById("elFd").value) || 80));
+        const pf = Math.min(1, Math.max(0.1, Number(document.getElementById("elPf").value) || 0.9));
+        const len = Math.max(0.5, Number(document.getElementById("elLen").value) || 45);
+        const sec = Math.max(0.5, Number(document.getElementById("elSec").value) || 10);
+        const maxDv = Math.max(0.5, Number(document.getElementById("elMaxDv").value) || 3);
+        const pdKw = kw * (fd / 100);
+        const sKva = pdKw / pf;
+        const factor = sys === "3F" ? Math.sqrt(3) : 1;
+        const dvFactor = sys === "3F" ? Math.sqrt(3) : 2;
+        const ib = (pdKw * 1000) / (factor * volt * pf);
+        const rho = 0.0217; // Resistividad Cu referencia ~70 °C (Ω·mm²/m)
+        const dv = (dvFactor * rho * len * ib * pf) / sec;
+        const dvPct = (dv / volt) * 100;
+        const ok = dvPct <= maxDv;
+        out.innerHTML = `
+          <div style="margin-bottom:10px;">
+            <span class="pill ${ok ? "success" : "danger"}">${ok ? `✅ Caída de tensión dentro del límite (${dvPct.toFixed(2)}% ≤ ${maxDv}%)` : `⚠️ Supera límite ΔV (${dvPct.toFixed(2)}% > ${maxDv}%) — aumentar sección`}</span>
+          </div>
+          <div class="calc-grid">
+            <div><small style="color:var(--text-soft);">Potencia demandada Pd / Aparente S</small><div style="font-size:19px; font-weight:800;">${pdKw.toFixed(2)} kW · ${sKva.toFixed(2)} kVA</div></div>
+            <div><small style="color:var(--text-soft);">Corriente de diseño (Ib)</small><div style="font-size:21px; font-weight:800; color:var(--primary);">${ib.toFixed(1)} A</div></div>
+            <div><small style="color:var(--text-soft);">Caída de tensión ΔV (Cu ~70 °C)</small><div style="font-size:21px; font-weight:800; color:${ok ? "var(--success)" : "var(--danger)"};">${dv.toFixed(2)} V (${dvPct.toFixed(2)}%)</div></div>
+          </div>
+          <p style="margin:10px 0 0; font-size:11.8px; color:var(--text-soft);">Cálculo orientativo de aprendizaje (solo componente resistiva Cu a ~70 °C); validar siempre ampacidad, factores de agrupamiento/temperatura, reactancia, poder de corte y tablas del reglamento vigente de tu país con un profesional habilitado.</p>
+        `;
+        return { sys, volt, kw, fd, pf, len, sec, maxDv, pdKw: Number(pdKw.toFixed(2)), ib: Number(ib.toFixed(2)), dvPct: Number(dvPct.toFixed(2)) };
+      }
+      if (wsMeta.calculator === "lighting_lumen") {
+        const len = Math.max(0.5, Number(document.getElementById("ltLen").value) || 12);
+        const wid = Math.max(0.5, Number(document.getElementById("ltWid").value) || 8);
+        const lux = Math.max(10, Number(document.getElementById("ltLux").value) || 500);
+        const lm = Math.max(50, Number(document.getElementById("ltLm").value) || 4200);
+        const w = Math.max(1, Number(document.getElementById("ltW").value) || 34);
+        const cu = Math.min(1, Math.max(0.05, Number(document.getElementById("ltCu").value) || 0.65));
+        const mf = Math.min(1, Math.max(0.1, Number(document.getElementById("ltMf").value) || 0.8));
+        const area = len * wid;
+        const phiReq = (lux * area) / (cu * mf);
+        const nLum = Math.max(1, Math.ceil(phiReq / lm));
+        const emReal = (nLum * lm * cu * mf) / area;
+        const totalW = nLum * w;
+        const wPerM2 = totalW / area;
+        const veei = emReal > 0 ? (wPerM2 / emReal) * 100 : 0;
+        const ok = veei <= 3.5;
+        out.innerHTML = `
+          <div style="margin-bottom:10px;">
+            <span class="pill ${ok ? "success" : "gold"}">${ok ? `✅ Eficiencia energética orientativa óptima (VEEI ${veei.toFixed(2)})` : `⚡ Eficiencia mejorable (VEEI ${veei.toFixed(2)}) — revisar eficacia lm/W o CU`}</span>
+          </div>
+          <div class="calc-grid">
+            <div><small style="color:var(--text-soft);">Luminarias mínimas necesarias (N)</small><div style="font-size:21px; font-weight:800; color:var(--primary);">${nLum} uds (${area.toFixed(1)} m²)</div></div>
+            <div><small style="color:var(--text-soft);">Iluminancia media estimada (Em)</small><div style="font-size:20px; font-weight:800; color:var(--success);">${Math.round(emReal)} lux</div></div>
+            <div><small style="color:var(--text-soft);">Potencia instalada / VEEI orientativo</small><div style="font-size:19px; font-weight:800;">${totalW} W · ${wPerM2.toFixed(2)} W/m² · VEEI ${veei.toFixed(2)}</div></div>
+          </div>
+          <p style="margin:10px 0 0; font-size:11.8px; color:var(--text-soft);">Pre-dimensionamiento por el Método de los Lúmenes: la uniformidad (U0), el índice de deslumbramiento (UGR) y las reflectancias reales deben validarse en DIALux usando ficheros .ldt o .ies certificados.</p>
+        `;
+        return { len, wid, lux, lm, w, cu, mf, area: Number(area.toFixed(1)), nLum, emReal: Math.round(emReal), totalW, veei: Number(veei.toFixed(2)) };
+      }
 
       const data = {};
       wsMeta.fields.forEach((f) => { data[f.id] = document.getElementById(`ws_${f.id}`).value.trim(); });
@@ -2360,8 +2556,12 @@
 
     if (wsMeta.calculator) {
       collectCalcData();
-      elRoot.querySelectorAll("input, textarea").forEach((inp) => inp.addEventListener("input", collectCalcData));
+      elRoot.querySelectorAll("input, textarea, select").forEach((inp) => {
+        inp.addEventListener("input", collectCalcData);
+        inp.addEventListener("change", collectCalcData);
+      });
     }
+    wireVisualZoomButtons();
 
     document.getElementById("saveWsBtn").onclick = () => {
       pdb.workshops[b.id] = { completed: true, data: collectCalcData(), updatedAt: new Date().toISOString() };
@@ -2557,18 +2757,18 @@
             <circle cx="40" cy="40" r="35" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
             <circle cx="40" cy="40" r="28" fill="none" stroke="#b45309" stroke-width="1.5" stroke-dasharray="3 2"/>
             <text x="40" y="36" text-anchor="middle" font-size="11" font-weight="800" fill="#92400e">OFICIAL</text>
-            <text x="40" y="50" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309">${prog.id === "gmba" ? "90 ECTS" : prog.id === "pmp" ? "108 H · PMP" : prog.id === "emba" ? "19 CRÉDITOS" : "228 HORAS"}</text>
+            <text x="40" y="50" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b45309">${prog.id === "gmba" ? "90 ECTS" : prog.id === "pmp" ? "108 H · PMP" : prog.id === "emba" ? "19 CRÉDITOS" : prog.id === "iael" ? "200 H · BIM+IA" : "228 HORAS"}</text>
           </svg>
         </div>
 
         <div class="diploma-center">
-          <div class="diploma-kicker">${prog.id === "pmp" ? "Certificado de Finalización y Preparación Ejecutiva" : "Certificado de Aprovechamiento y Competencia Ejecutiva"}</div>
+          <div class="diploma-kicker">${prog.id === "pmp" ? "Certificado de Finalización y Preparación Ejecutiva" : prog.id === "iael" ? "Certificado de Especialización Técnica" : "Certificado de Aprovechamiento y Competencia Ejecutiva"}</div>
           <div class="diploma-title">Se otorga el presente diploma a</div>
           <div class="diploma-student">${esc(db.profile.name)}</div>
           <p class="diploma-desc">
-            Por haber completado y superado satisfactoriamente las evaluaciones de los <strong>${prog.blocks.length} bloques formativos (${prog.totalTopics} temas)</strong> del <strong>${esc(prog.programName)}</strong>, acreditando sus competencias directivas y prácticas en ${esc(prog.tagline.toLowerCase())}
+            Por haber completado y superado satisfactoriamente las evaluaciones de los <strong>${prog.blocks.length} bloques formativos (${prog.totalTopics} temas)</strong> del <strong>${esc(prog.programName)}</strong>, acreditando sus ${prog.id === "iael" ? "competencias técnicas y prácticas" : "competencias directivas y prácticas"} en ${esc(prog.tagline.toLowerCase())}
           </p>
-          ${prog.id === "pmp" ? `<p style="font-size:11px; color:#64748b; max-width:660px; margin:0 auto 10px;"><em>Nota de acreditación: este certificado acredita la finalización de la formación interna en dirección de proyectos y preparación del examen; no equivale a la certificación oficial PMP® otorgada por PMI.</em></p>` : ""}
+          ${prog.id === "pmp" ? `<p style="font-size:11px; color:#64748b; max-width:660px; margin:0 auto 10px;"><em>Nota de acreditación: este certificado acredita la finalización de la formación interna en dirección de proyectos y preparación del examen; no equivale a la certificación oficial PMP® otorgada por PMI.</em></p>` : prog.id === "iael" ? `<p style="font-size:11px; color:#64748b; max-width:660px; margin:0 auto 10px;"><em>Nota técnica y de alcance: este diploma acredita formación interna en diseño, modelado BIM (DIALux, Revit MEP, Twinmotion) y uso responsable de IA; no constituye una titulación MBA ni habilita legalmente para firmar proyectos o instalaciones reales sin la titulación profesional, colegiación y validación normativa aplicable en cada jurisdicción.</em></p>` : ""}
 
           <div class="diploma-meta-grid">
             <div><small>Carga académica</small><strong>${esc(prog.durationLabel)}</strong></div>
@@ -2771,9 +2971,9 @@
           <h1 style="margin:0; font-size:23px;">🔍 Verificador Público de Credenciales</h1>
           ${!cloudState.user && cloudState.configured ? `<button class="btn btn-primary" id="verifyGoLoginBtn">🔐 Iniciar sesión en el Campus</button>` : ""}
         </div>
-        <p style="margin:0 0 14px; color:var(--text-soft); font-size:13.5px;">Valida en línea cualquier certificado emitido en cualquiera de los 4 programas de <strong>${esc(db.profile.org)}</strong>.</p>
+        <p style="margin:0 0 14px; color:var(--text-soft); font-size:13.5px;">Valida en línea cualquier certificado emitido en cualquiera de los ${PROGRAM_ORDER.length} programas de <strong>${esc(db.profile.org)}</strong>.</p>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input class="input" id="verifyInput" style="flex:1; min-width:240px;" value="${esc(query)}" placeholder="Ej.: CERT-DIND-2026-..., CERT-GMBA-2026-..., CERT-PMP-2026-... o CERT-EMBA-2026-..." />
+          <input class="input" id="verifyInput" style="flex:1; min-width:240px;" value="${esc(query)}" placeholder="Ej.: CERT-DIND-2026-..., CERT-GMBA-2026-..., CERT-PMP-2026-..., CERT-EMBA-2026-... o CERT-IAEL-2026-..." />
           <button class="btn btn-primary" id="doVerifyBtn">Verificar código</button>
           ${issuedCerts.map((c) => `<button class="btn" data-fill-cid="${c.id}">Usar ${c.prog.icon} ${c.id}</button>`).join("")}
         </div>
@@ -3096,11 +3296,12 @@
   }
 
   const LEAD_PROG_LABELS = {
-    all: "🌟 Pase All-Access (4 programas)",
+    all: "🌟 Pase All-Access (5 programas)",
     dind: "🚀 DIND (228 h)",
     gmba: "💼 Global MBA (90 ECTS)",
     pmp: "📐 Preparación PMP (108 h)",
-    emba: "🏛️ Executive MBA (19 créd.)"
+    emba: "🏛️ Executive MBA (19 créd.)",
+    iael: "⚡ IA en Diseño Eléctrico (200 h)"
   };
   const LEAD_PLAN_LABELS = {
     allAccess: "Pase All-Access",

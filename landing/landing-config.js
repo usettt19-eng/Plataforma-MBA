@@ -21,7 +21,7 @@ window.LANDING_CONFIG = {
     individual: {
       badge: "Acceso Específico",
       name: "1 Programa Certificado",
-      subtitle: "Elige entre DIND, Global MBA Comercial, Preparación PMP o Executive MBA.",
+      subtitle: "Elige entre DIND, Global MBA Comercial, Preparación PMP, Executive MBA o IA en Diseño Eléctrico (BIM).",
       price: "490 €",
       period: "pago único · acceso 12 meses",
       ctaLabel: "Solicitar acceso a 1 programa",
@@ -30,7 +30,7 @@ window.LANDING_CONFIG = {
     allAccess: {
       badge: "Más Elegido · Mejor Valor",
       name: "Pase Ejecutivo All-Access",
-      subtitle: "Acceso completo a los 4 programas (38 bloques, 180 temas, 720 h y 4 diplomas QR).",
+      subtitle: "Acceso completo a los 5 programas (44 bloques, 230 temas, 920 h y 5 diplomas QR).",
       price: "890 €",
       period: "pago único · acceso completo",
       ctaLabel: "Solicitar Pase All-Access",

@@ -905,6 +905,81 @@ html, body {
 .lead-status-sel.st-enrolled { background: var(--success-soft); color: var(--success); border-color: var(--success-border); }
 .lead-status-sel.st-archived { background: var(--surface-2); color: var(--text-soft); border-color: var(--border); }
 
+/* Visual Technical Reference Cards (SVGs & Renders) */
+.visual-ref-card {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  padding: 14px 16px;
+}
+.visual-ref-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.visual-ref-head strong { font-size: 13.8px; color: var(--text); }
+.visual-ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.visual-ref-figure {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 10px;
+  margin: 0;
+  text-align: center;
+}
+.visual-ref-img {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  display: block;
+  border-radius: 8px;
+  cursor: zoom-in;
+  background: #ffffff;
+}
+.visual-ref-caption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.45;
+  text-align: left;
+}
+.visual-zoom-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.82);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.visual-zoom-modal {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 14px;
+  max-width: 1060px;
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 16px;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.45);
+}
+.visual-zoom-modal img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 @media (max-width: 1080px) {
   .admin-grid { grid-template-columns: 1fr; }
 }

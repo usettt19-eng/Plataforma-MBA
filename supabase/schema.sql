@@ -137,7 +137,7 @@ create trigger on_auth_user_created
 -- -----------------------------------------------------------------------------
 create table if not exists public.enrollments (
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   enrolled_at timestamptz not null default now(),
   last_accessed_at timestamptz not null default now(),
   primary key (user_id, program_id)
@@ -175,7 +175,7 @@ create policy "enrollments_delete_own"
 -- -----------------------------------------------------------------------------
 create table if not exists public.topic_progress (
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   topic_id text not null,
   completed boolean not null default false,
   notes text not null default '',
@@ -224,7 +224,7 @@ create policy "topic_progress_delete_own"
 -- -----------------------------------------------------------------------------
 create table if not exists public.workshop_submissions (
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   block_id text not null,
   completed boolean not null default false,
   payload jsonb not null default '{}'::jsonb,
@@ -269,7 +269,7 @@ create policy "workshop_submissions_delete_own"
 -- -----------------------------------------------------------------------------
 create table if not exists public.exam_attempts (
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   block_id text not null,
   best_score integer not null default 0 check (best_score between 0 and 100),
   last_score integer not null default 0 check (last_score between 0 and 100),
@@ -317,7 +317,7 @@ create policy "exam_attempts_delete_own"
 -- -----------------------------------------------------------------------------
 create table if not exists public.program_study_time (
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   total_seconds integer not null default 0 check (total_seconds >= 0),
   by_block jsonb not null default '{}'::jsonb,
   by_topic jsonb not null default '{}'::jsonb,
@@ -364,7 +364,7 @@ create policy "program_study_time_delete_own"
 create table if not exists public.study_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   block_id text,
   topic_id text,
   label text not null,
@@ -401,7 +401,7 @@ create policy "study_sessions_delete_own"
 create table if not exists public.certificates (
   cert_id text primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
-  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba')),
+  program_id text not null check (program_id in ('dind', 'gmba', 'pmp', 'emba', 'iael')),
   holder_name text not null,
   program_name text not null,
   org_name text not null,

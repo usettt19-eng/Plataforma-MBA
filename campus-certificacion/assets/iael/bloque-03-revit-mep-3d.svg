@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" width="920" height="420" role="img" aria-label="Coordinación espacial BIM 3D en Revit MEP Eléctricas">
+  <defs>
+    <pattern id="grid3" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="920" height="420" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <rect width="920" height="420" rx="14" fill="url(#grid3)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="920" height="52" rx="14" fill="#0f172a"/>
+  <rect x="0" y="38" width="920" height="14" fill="#0f172a"/>
+  <text x="24" y="24" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#22d3ee">BLOQUE 3 · MODELADO 3D EN REVIT MEP ELÉCTRICAS Y COORDINACIÓN BIM</text>
+  <text x="24" y="42" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" fill="#cbd5e1">Equipos · Conductos (Alumbrado / Tomas / Acometidas) · Uniones y Accesorios · Reserva Libre Frente a Estructura y HVAC</text>
+
+  <!-- Left 2/3: Elevation / Coordinated Section View -->
+  <rect x="22" y="68" width="595" height="286" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="36" y="88" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#1e293b">SECCIÓN DE COORDINACIÓN EN PLÉNUM Y CUARTO TÉCNICO</text>
+
+  <!-- Concrete Slab Top -->
+  <rect x="42" y="102" width="555" height="20" fill="#94a3b8"/>
+  <text x="320" y="116" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="800" fill="#ffffff">FORJADO SUPERIOR / LOSA ESTRUCTURAL (+4,00 m)</text>
+
+  <!-- Structural Beam -->
+  <rect x="330" y="122" width="110" height="36" fill="#64748b"/>
+  <text x="385" y="144" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#ffffff">VIGA ESTR.</text>
+
+  <!-- HVAC Duct (Cyan/Blue contrast) -->
+  <rect x="462" y="132" width="120" height="44" rx="4" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="522" y="152" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#1e40af">CONDUCTO HVAC</text>
+  <text x="522" y="166" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.8" fill="#1d4ed8">Disciplina Mecánica</text>
+
+  <!-- Hangers from slab -->
+  <line x1="210" y1="122" x2="210" y2="175" stroke="#475569" stroke-width="2"/>
+  <line x1="490" y1="122" x2="490" y2="205" stroke="#475569" stroke-width="2" stroke-dasharray="3 2"/>
+
+  <!-- Electrical Panel Left Wall -->
+  <rect x="42" y="122" width="14" height="218" fill="#cbd5e1"/>
+  <rect x="56" y="180" width="58" height="106" rx="5" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+  <rect x="64" y="190" width="42" height="14" rx="2" fill="#38bdf8"/>
+  <text x="85" y="228" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#fde047">TABLERO</text>
+  <text x="85" y="241" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.8" fill="#e2e8f0">MDP-01</text>
+
+  <!-- Feeder conduit rising with Elbow & Pull Box -->
+  <path d="M 85 180 L 85 165 L 155 165" fill="none" stroke="#b45309" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Condulet / Caja de paso -->
+  <rect x="155" y="155" width="26" height="20" rx="3" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+  <text x="168" y="169" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="800" fill="#78350f">LB</text>
+
+  <!-- Main Cable Tray / Tubo Troncal horizontal below beam -->
+  <path d="M 181 165 L 270 165 L 295 190 L 585 190" fill="none" stroke="#b45309" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="415" y="182" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="800" fill="#92400e">TUBO ALIMENTADOR / BANDEJA (+2,95 m · evita viga y HVAC)</text>
+
+  <!-- Lighting Conduit Branch (Indigo) -->
+  <path d="M 114 205 L 350 205" fill="none" stroke="#4f46e5" stroke-width="4.5"/>
+  <!-- Junction Box Tee -->
+  <circle cx="255" cy="205" r="7" fill="#eef2ff" stroke="#4f46e5" stroke-width="2"/>
+  <line x1="255" y1="212" x2="255" y2="250" stroke="#4f46e5" stroke-width="3.5"/>
+  <!-- Suspended Ceiling -->
+  <line x1="125" y1="252" x2="590" y2="252" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="585" y="247" text-anchor="end" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#475569">Falso techo (+2,70 m)</text>
+
+  <!-- Luminaire hosted on ceiling -->
+  <rect x="230" y="250" width="52" height="10" rx="3" fill="#4f46e5"/>
+  <polygon points="236,260 220,305 292,305 276,260" fill="#fde047" fill-opacity="0.28"/>
+  <text x="256" y="275" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.8" font-weight="700" fill="#312e81">Luminaria</text>
+
+  <!-- Socket Conduit Branch (Cyan) -->
+  <path d="M 114 232 L 505 232 L 505 312 L 535 312" fill="none" stroke="#0891b2" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="505" cy="232" r="5.5" fill="#ecfeff" stroke="#0891b2" stroke-width="2"/>
+  <rect x="535" y="301" width="32" height="22" rx="4" fill="#ecfeff" stroke="#0891b2" stroke-width="1.8"/>
+  <text x="551" y="315" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="800" fill="#155e75">TOMA</text>
+
+  <!-- Floor Slab -->
+  <rect x="42" y="335" width="555" height="14" fill="#64748b"/>
+  <text x="320" y="346" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#ffffff">NIVEL PISO TERMINADO (±0,00 m)</text>
+
+  <!-- Right 1/3: Legend & Modeling Rules -->
+  <rect x="632" y="68" width="266" height="286" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="765" y="88" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#0f172a">CLASIFICACIÓN MEP Y UNIONES</text>
+
+  <rect x="648" y="102" width="234" height="44" rx="7" fill="#fffbeb" stroke="#b45309" stroke-width="1.4"/>
+  <text x="660" y="120" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.2" font-weight="800" fill="#92400e">🟠 Acometidas y Alimentadores</text>
+  <text x="660" y="135" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#78350f">Cajas de paso, radios amplios y soportes</text>
+
+  <rect x="648" y="154" width="234" height="44" rx="7" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+  <text x="660" y="172" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.2" font-weight="800" fill="#312e81">🟣 Red de Alumbrado</text>
+  <text x="660" y="187" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#4338ca">Luminarias anidadas al anfitrión + cajas</text>
+
+  <rect x="648" y="206" width="234" height="44" rx="7" fill="#ecfeff" stroke="#0891b2" stroke-width="1.4"/>
+  <text x="660" y="224" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.2" font-weight="800" fill="#155e75">🔵 Tomacorrientes y Fuerza</text>
+  <text x="660" y="239" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#0e7490">Separado de datos · cotas de replanteo</text>
+
+  <rect x="648" y="260" width="234" height="80" rx="7" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="660" y="278" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="800" fill="#0f172a">Preferencias de Enrutamiento:</text>
+  <text x="660" y="294" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">• Codos según radio mínimo de curva</text>
+  <text x="660" y="309" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">• Conduletas LB/LR/LL y acoples reales</text>
+  <text x="660" y="324" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">• Cero cruces vs. vigas y ductos HVAC</text>
+
+  <!-- Footer disclaimer -->
+  <rect x="20" y="366" width="880" height="38" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>
+  <text x="460" y="383" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#92400e">Criterio BIM: un modelo Revit MEP geométricamente limpio y sin colisiones facilita coordinación, mediciones y planos,</text>
+  <text x="460" y="397" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#78350f">pero NO equivale por sí solo a una verificación reglamentaria ni de cálculo eléctrico certificado.</text>
+</svg>

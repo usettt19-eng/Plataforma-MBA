@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" width="920" height="420" role="img" aria-label="Diagrama de fotometría y cálculo lumínico DIALux">
+  <defs>
+    <pattern id="grid2" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="920" height="420" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <rect width="920" height="420" rx="14" fill="url(#grid2)"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="920" height="52" rx="14" fill="#0f172a"/>
+  <rect x="0" y="38" width="920" height="14" fill="#0f172a"/>
+  <text x="24" y="24" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="800" fill="#38bdf8">BLOQUE 2 · FOTOMETRÍA (.LDT / .IES), REFLECTANCIAS Y CÁLCULO LUMÍNICO EN DIALux</text>
+  <text x="24" y="42" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" fill="#cbd5e1">Componentes clave del estudio fotométrico: Curva Polar + Entorno con Reflectancias + Rejilla de Cálculo Normativa</text>
+
+  <!-- Panel 1: Polar Photometric Curve -->
+  <rect x="22" y="68" width="260" height="286" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="152" y="88" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#1e293b">1. ARCHIVO .LDT / .IES</text>
+  <text x="152" y="103" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" fill="#64748b">Curva polar intensidades (cd / klm)</text>
+
+  <!-- Polar Grid -->
+  <circle cx="152" cy="145" r="30" fill="none" stroke="#cbd5e1" stroke-width="1"/>
+  <circle cx="152" cy="145" r="60" fill="none" stroke="#cbd5e1" stroke-width="1"/>
+  <circle cx="152" cy="145" r="90" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <line x1="152" y1="125" x2="152" y2="250" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="62" y1="145" x2="242" y2="145" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="90" y1="145" x2="214" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="214" y1="145" x2="90" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- C0-C180 & C90-C270 curves -->
+  <path d="M 152 145 C 195 162, 206 205, 180 232 C 165 246, 158 248, 152 248 C 146 248, 139 246, 124 232 C 98 205, 109 162, 152 145 Z" fill="#0284c7" fill-opacity="0.20" stroke="#0284c7" stroke-width="2.2"/>
+  <path d="M 152 145 C 180 160, 188 198, 170 226 C 160 242, 156 245, 152 245 C 148 245, 144 242, 134 226 C 116 198, 124 160, 152 145 Z" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="5 3"/>
+
+  <rect x="38" y="264" width="228" height="76" rx="7" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+  <text x="50" y="282" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#0284c7">━━ Plano C0–C180 (transversal)</text>
+  <text x="50" y="298" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#dc2626">- - - Plano C90–C270 (longitudinal)</text>
+  <text x="50" y="315" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Flujo Φ (lm) · Potencia (W) · CRI · TCC (K)</text>
+  <text x="50" y="330" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#475569">Control de ángulo UGR ≤ umbral uso</text>
+
+  <!-- Panel 2: Room Section Reflectances + Workplane -->
+  <rect x="300" y="68" width="350" height="286" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="475" y="88" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#1e293b">2. MODELO DE LOCAL Y PLANO ÚTIL</text>
+  <text x="475" y="103" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" fill="#64748b">Reflectancias ρ · Factor de Mantenimiento (MF) · Alturas</text>
+
+  <!-- Room box -->
+  <rect x="330" y="124" width="290" height="175" fill="#ffffff" stroke="#334155" stroke-width="2.2"/>
+  <!-- Ceiling strip -->
+  <rect x="332" y="126" width="286" height="18" fill="#f1f5f9"/>
+  <text x="475" y="139" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.8" font-weight="700" fill="#334155">Techo · Reflectancia ref. ρ ≈ 70 %</text>
+
+  <!-- Two Luminaires & light cones -->
+  <polygon points="405,144 350,248 460,248" fill="#fde047" fill-opacity="0.28"/>
+  <polygon points="545,144 490,248 600,248" fill="#fde047" fill-opacity="0.28"/>
+  <rect x="383" y="140" width="44" height="8" rx="2" fill="#0284c7"/>
+  <rect x="523" y="140" width="44" height="8" rx="2" fill="#0284c7"/>
+
+  <!-- Wall Labels -->
+  <text x="337" y="205" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" font-weight="700" fill="#475569">Paredes</text>
+  <text x="337" y="218" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">ρ ≈ 50 %</text>
+
+  <!-- Workplane dashed line -->
+  <line x1="330" y1="248" x2="620" y2="248" stroke="#4f46e5" stroke-width="2.5" stroke-dasharray="7 4"/>
+  <rect x="386" y="236" width="178" height="22" rx="5" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.2"/>
+  <text x="475" y="250" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.8" font-weight="800" fill="#3730a3">Plano útil de trabajo (0,85 m)</text>
+
+  <!-- Height dimension 0.85m -->
+  <line x1="600" y1="248" x2="600" y2="299" stroke="#dc2626" stroke-width="1.6"/>
+  <line x1="594" y1="248" x2="606" y2="248" stroke="#dc2626" stroke-width="1.6"/>
+  <line x1="594" y1="299" x2="606" y2="299" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="590" y="278" text-anchor="end" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#b91c1c">0,75–0,85 m</text>
+
+  <!-- Floor -->
+  <rect x="332" y="286" width="286" height="12" fill="#e2e8f0"/>
+  <text x="475" y="295" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#334155">Suelo · ρ ≈ 20 %</text>
+
+  <text x="475" y="320" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#0f172a">MF (Mantenimiento) = p. ej. 0,80 (depreciación + limpieza)</text>
+  <text x="475" y="335" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5" fill="#64748b">Un plano CAD mal escalado (mm vs. m) invalida toda la simulación</text>
+
+  <!-- Panel 3: False Color & KPIs -->
+  <rect x="668" y="68" width="230" height="286" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="783" y="88" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5" font-weight="800" fill="#1e293b">3. LECTURA DE RESULTADOS</text>
+  <text x="783" y="103" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" fill="#64748b">Colores falsos · Criterios aceptación</text>
+
+  <!-- False color bar -->
+  <rect x="688" y="118" width="190" height="16" rx="4" fill="#ef4444"/>
+  <rect x="688" y="118" width="152" height="16" rx="4" fill="#eab308"/>
+  <rect x="688" y="118" width="114" height="16" rx="4" fill="#22c55e"/>
+  <rect x="688" y="118" width="76" height="16" rx="4" fill="#06b6d4"/>
+  <rect x="688" y="118" width="38" height="16" rx="4" fill="#1d4ed8"/>
+  <text x="688" y="147" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" fill="#475569">100 lx</text>
+  <text x="783" y="147" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#15803d">500 lx</text>
+  <text x="878" y="147" text-anchor="end" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" fill="#b91c1c">750+ lx</text>
+
+  <!-- Metric Boxes -->
+  <rect x="684" y="160" width="198" height="40" rx="6" fill="#ffffff" stroke="#16a34a" stroke-width="1.4"/>
+  <text x="694" y="177" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#166534">Em · Iluminancia Media (lux)</text>
+  <text x="694" y="191" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">Comparar frente a exigencia tarea</text>
+
+  <rect x="684" y="207" width="198" height="40" rx="6" fill="#ffffff" stroke="#0284c7" stroke-width="1.4"/>
+  <text x="694" y="224" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#0369a1">U0 · Uniformidad (Emin / Em)</text>
+  <text x="694" y="238" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">Evita zonas de sombra acusadas</text>
+
+  <rect x="684" y="254" width="198" height="40" rx="6" fill="#ffffff" stroke="#7c3aed" stroke-width="1.4"/>
+  <text x="694" y="271" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#5b21b6">UGR · Deslumbramiento</text>
+  <text x="694" y="285" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">Confort visual del puesto (ej. ≤ 19)</text>
+
+  <rect x="684" y="301" width="198" height="40" rx="6" fill="#ffffff" stroke="#ca8a04" stroke-width="1.4"/>
+  <text x="694" y="318" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" font-weight="800" fill="#854d0e">VEEI / LPD (Eficiencia W/m²)</text>
+  <text x="694" y="332" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.2" fill="#475569">Consumo por cada 100 lx</text>
+
+  <!-- Footer disclaimer -->
+  <rect x="20" y="366" width="880" height="38" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+  <text x="460" y="383" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" fill="#0c4a6e">El cálculo fotométrico en DIALux valida iluminancia, uniformidad y UGR según la norma aplicable (ej. UNE-EN 12464-1 a verificar),</text>
+  <text x="460" y="397" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10.5" fill="#0369a1">pero NO sustituye el dimensionamiento eléctrico de circuitos, protecciones ni la puesta a tierra del Bloque 1.</text>
+</svg>

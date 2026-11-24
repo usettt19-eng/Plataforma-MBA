@@ -1,14 +1,15 @@
 (function () {
   const CFG = window.LANDING_CONFIG || {};
   const CATALOG = window.PROGRAM_CATALOG || {};
-  const ORDER = ["dind", "gmba", "pmp", "emba"].filter((id) => CATALOG[id]);
+  const ORDER = ["dind", "gmba", "pmp", "emba", "iael"].filter((id) => CATALOG[id]);
   const THEME_KEY = "academia_landing_theme_v1";
 
   const CALCS_BY_PROGRAM = {
     dind: "Incluye 3 simuladores en vivo: Matriz de Decisión Ponderada, Priorizador RICE + MVP Lean y Unit Economics E-commerce.",
     gmba: "Incluye 4 simuladores en vivo: Embudo CRO E-commerce, Calculadora SEM/ROAS/CPA, Matriz Comercial y Simulador P&G / EBITDA.",
     pmp: "Incluye 2 simuladores en vivo: Estimación PERT (3 valores + σ) + EMV Riesgos y Calculadora Completa de Valor Ganado (EVM).",
-    emba: "Incluye 3 simuladores en vivo: Elasticidad Precio–Demanda, Valoración DCF / WACC / VAN y Valoración M&A (EV/EBITDA y Sinergias)."
+    emba: "Incluye 3 simuladores en vivo: Elasticidad Precio–Demanda, Valoración DCF / WACC / VAN y Valoración M&A (EV/EBITDA y Sinergias).",
+    iael: "Incluye 2 simuladores en vivo: Carga Eléctrica / Corriente Ib / Caída ΔV y Método de los Lúmenes + 6 esquemas técnicos BIM/IA."
   };
 
   // Apply theme
@@ -103,6 +104,7 @@
         <div style="padding:10px; background:var(--surface-2); border-radius:10px;"><strong>🛒 E-commerce &amp; Growth</strong><br/>Margen neto, CRO y ROAS/CPA</div>
         <div style="padding:10px; background:var(--surface-2); border-radius:10px;"><strong>📐 PMO &amp; Riesgos</strong><br/>PERT Beta + EMV y Valor Ganado EVM</div>
         <div style="padding:10px; background:var(--surface-2); border-radius:10px;"><strong>⚖️ Estrategia</strong><br/>Elasticidad Precio y Matriz Ponderada</div>
+        <div style="padding:10px; background:var(--surface-2); border-radius:10px; grid-column:1 / -1;"><strong>⚡ Ingeniería Eléctrica &amp; BIM</strong><br/>Carga / Caída Tensión ΔV (1F/3F) + Método de Lúmenes / VEEI</div>
       </div>
     `,
     qr: `
@@ -175,6 +177,8 @@
       sylNoteEl.textContent = "Nota de acreditación: el certificado final acredita las 108 h de formación interna y preparación PMP; no equivale a la certificación oficial otorgada por PMI.";
     } else if (pid === "emba") {
       sylNoteEl.textContent = "Nota curricular: adaptación didáctica independiente inspirada en estructura Executive MBA modular de 19 unidades de crédito.";
+    } else if (pid === "iael") {
+      sylNoteEl.textContent = "Nota técnica y de alcance: formación especializada de 200 h en diseño eléctrico, DIALux, Revit MEP, Twinmotion e IA; no constituye un título MBA ni sustituye la verificación reglamentaria ni la firma profesional competente en cada país.";
     } else {
       sylNoteEl.textContent = "Todos los bloques incluyen guías interactivas de 8 diapositivas, narrador de audio en español, caso práctico resuelto, taller aplicable y examen situacional.";
     }
@@ -277,9 +281,9 @@
       featured: true,
       defaultProg: "all",
       features: [
-        "✓ Los 4 programas completos (38 bloques · 180 temas · 720 h)",
-        "✓ Las 11 calculadoras estratégicas y 190 casos de examen",
-        "✓ Hasta 4 diplomas independientes verificables por QR",
+        "✓ Los 5 programas completos (44 bloques · 230 temas · 920 h)",
+        "✓ Las 13 calculadoras ejecutivas/técnicas y 220 casos de examen",
+        "✓ Hasta 5 diplomas independientes verificables por QR + esquemas BIM",
         "✓ Sincronización multi-dispositivo y portafolio .md"
       ]
     },

@@ -291,6 +291,33 @@ code {
 .grad-gmba { background: linear-gradient(135deg, #4c0519 0%, #9f1239 50%, #d97706 100%); }
 .grad-pmp { background: linear-gradient(135deg, #064e3b 0%, #0f766e 50%, #0284c7 100%); }
 .grad-emba { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #b45309 100%); }
+.grad-iael { background: linear-gradient(135deg, #0f172a 0%, #0e7490 50%, #ca8a04 100%); }
+.program-card-wide { grid-column: 1 / -1; }
+.prog-body-split {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 22px;
+  align-items: center;
+}
+.prog-visual-box {
+  background: #0b1124;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 8px;
+}
+.prog-visual-box img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 9px;
+}
+.prog-visual-caption {
+  margin-top: 8px;
+  font-size: 11.8px;
+  color: #cbd5e1;
+  text-align: center;
+}
 .prog-badge {
   display: inline-block; font-size: 11.5px; font-weight: 700;
   background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.3);
@@ -478,7 +505,7 @@ code {
 .wa-float:hover { background: #15803d; }
 
 @media (max-width: 1000px) {
-  .hero-grid, .enroll-grid { grid-template-columns: 1fr; }
+  .hero-grid, .enroll-grid, .prog-body-split { grid-template-columns: 1fr; }
   .kpi-strip { grid-template-columns: repeat(3, 1fr); }
   .pillars-grid, .pricing-grid, .steps-grid { grid-template-columns: 1fr; }
   .programs-grid { grid-template-columns: 1fr; }
